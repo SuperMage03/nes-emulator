@@ -1,9 +1,9 @@
 #ifndef _MEMORY_UNIT_HPP_
 #define _MEMORY_UNIT_HPP_
-
-#include <cstdint>
-#include <fstream>
+// Stardard Library Headers
+// #include <fstream>
 #include <memory>
+#include <cstdint>
 
 class MemoryUnit {
 public:

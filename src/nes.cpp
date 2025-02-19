@@ -1,5 +1,6 @@
 #include "nes.hpp"
 // Standard Library Headers
+#include <fstream>
 #include <iostream>
 // Project Headers
 #include "cartridge.hpp"
@@ -16,6 +17,6 @@ void NES::loadCartridge(const std::string& path) {
     if (!nes_rom.is_open()) {
         std::cerr << "Failed to open the file" << std::endl;
     }
-    
+
     cartridge_ = Cartridge::makeCartridge(nes_rom);
 }
