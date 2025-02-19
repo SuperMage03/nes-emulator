@@ -19,7 +19,7 @@ public:
     * @param  file_in: The file stream to read and initialize RAM from
     * @return None
     */
-    MemoryUnit(std::ifstream& file_in);
+    // MemoryUnit(std::ifstream& file_in);
 
     /**
     * @brief  Reads 1 byte of data at given memory address
@@ -34,10 +34,24 @@ public:
     * @param  data: The data to write
     * @return True if successfully written, false otherwise
     */
-    bool write(const uint16_t& address, const uint8_t& data);
+    bool write(const uint16_t& address, const uint8_t& data) const;
+
+    /**
+    * @brief  Gets the memory block array
+    * @param  None
+    * @return The memory block array
+    */
+    uint8_t* getMemoryBlock() const;
+
+    /**
+    * @brief  Gets the size of the memory block
+    * @param  None
+    * @return The size of the memory block
+    */
+    uint32_t getSize() const;
 
 private:
-    uint32_t byte_size_;
+    const uint32_t byte_size_;
     std::unique_ptr<uint8_t[]> memory_block_;
 };
 

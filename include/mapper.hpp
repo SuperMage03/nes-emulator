@@ -1,10 +1,18 @@
 #ifndef _MAPPER_HPP_
 #define _MAPPER_HPP_
 // Standard Library Headers
+#include <memory>
 #include <cstdint>
 
 class Mapper {
 public:
+    /*
+    * @brief  Creates an instance of a Mapper based on the mapper_id
+    * @param  mapper_id: The ID of the Mapper
+    * @return A unique pointer to the created Mapper instance
+    */
+    static std::unique_ptr<Mapper> makeMapper(const uint8_t& mapper_id);
+
     // Destructor
     virtual ~Mapper() = default;
 
