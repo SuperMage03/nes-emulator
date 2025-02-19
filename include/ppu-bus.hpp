@@ -1,26 +1,24 @@
-#ifndef _CPU_BUS_HPP_
-#define _CPU_BUS_HPP_
-// Project Headers
+#ifndef _PPU_BUS_HPP_
+#define _PPU_BUS_HPP_
 #include "bus.hpp"
-#include "mos6502.hpp"
-#include "memory-unit.hpp"
+// Project Headers
 #include "rp2C02.hpp"
 #include "cartridge.hpp"
+#include "memory-unit.hpp"
 // Project Defines
-#define CPU_BUS_RAM_SIZE 0x0800
-#define CPU_BUS_PPU_SIZE 0x0008
+#define PPU_BUS_NAME_TABLE_SIZE 0x0800
+#define PPU_BUS_PALETTE_TABLE_SIZE 0x0020
 
-class CPUBUS : public BUS {
+class PPUBUS : public BUS {
 public:
     /**
     * @brief  Constructor for BUS
-    * @param  cpu: CPU on the BUS
-    * @param  ram: RAM on the BUS
-    * @param  ppu: PPU on the BUS
+    * @param  name_table: Name Table on the BUS
+    * @param  palette_table: Palette Table on the BUS
     * @param  cartridge: Cartridge on the BUS
     * @return None
     */
-    CPUBUS(MOS6502& cpu, MemoryUnit& ram, RP2C02& ppu, std::unique_ptr<Cartridge>& cartridge);
+    PPUBUS(RP2C02& ppu, MemoryUnit& name_table, MemoryUnit& palette_table, std::unique_ptr<Cartridge>& cartridge);
 
     /**
     * @brief  Reads data from the bus at the address
@@ -38,9 +36,9 @@ public:
     bool writeBusData(const uint16_t& address, const uint8_t& data) override;
 
 private:
-    MOS6502& cpu_;
-    MemoryUnit& ram_;
     RP2C02& ppu_;
+    MemoryUnit& name_table_;
+    MemoryUnit& palette_table_;
     std::unique_ptr<Cartridge>& cartridge_;
 };
 

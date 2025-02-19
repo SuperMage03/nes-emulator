@@ -5,6 +5,8 @@
 #include <ostream>
 #include <array>
 #include <variant>
+// Project Headers
+#include "bus.hpp"
 
 #define MOS6502_NMI_PC_ADDRESS 0xFFFA
 #define MOS6502_STARTING_PC_ADDRESS 0xFFFC
@@ -13,9 +15,6 @@
 #define MOS6502_NUMBER_OF_INSTRUCTIONS 256
 #define MOS6502_CLOCK_SPEED 1.789773 // In MHz
 #define MOS6502_CLOCK_PERIOD 558.73007 // In nanoseconds per cycle
-
-// Forward Delares BUS class
-class BUS;
 
 class MOS6502 {
 public:
@@ -174,7 +173,7 @@ private:
         NEGATIVE
     };
 
-    BUS* bus;
+    BUS* bus_;
 
     // MOS6502 Registers
     uint16_t program_counter_;

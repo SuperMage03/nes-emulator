@@ -32,6 +32,7 @@ void MOS6502::Pointer::write(const uint8_t& data) {
     // Holds Virtual Memory Address
     if (std::holds_alternative<uint16_t>(target_location_)) {
         cpu_.writeMemory(std::get<uint16_t>(target_location_), data);
+        return;
     }
     // Holds "Address" for Register
     switch (std::get<MOS6502::Pointer::Register>(target_location_)) {
@@ -82,14 +83,14 @@ const std::array<MOS6502::Instruction, MOS6502_NUMBER_OF_INSTRUCTIONS> MOS6502::
     { "BEQ", MOS6502::BEQ, MOS6502::REL, 2 },{ "SBC", MOS6502::SBC, MOS6502::IZY, 5 },{ "???", MOS6502::XXX, MOS6502::IMP, 2 },{ "???", MOS6502::XXX, MOS6502::IMP, 8 },{ "???", MOS6502::NOP, MOS6502::IMP, 4 },{ "SBC", MOS6502::SBC, MOS6502::ZPX, 4 },{ "INC", MOS6502::INC, MOS6502::ZPX, 6 },{ "???", MOS6502::XXX, MOS6502::IMP, 6 },{ "SED", MOS6502::SED, MOS6502::IMP, 2 },{ "SBC", MOS6502::SBC, MOS6502::ABY, 4 },{ "NOP", MOS6502::NOP, MOS6502::IMP, 2 },{ "???", MOS6502::XXX, MOS6502::IMP, 7 },{ "???", MOS6502::NOP, MOS6502::IMP, 4 },{ "SBC", MOS6502::SBC, MOS6502::ABX, 4 },{ "INC", MOS6502::INC, MOS6502::ABX, 7 },{ "???", MOS6502::XXX, MOS6502::IMP, 7 },
 }};
 
-MOS6502::MOS6502(): bus(nullptr), program_counter_(MOS6502_STARTING_PC_ADDRESS), stack_ptr_(0), accumulator_(0), 
+MOS6502::MOS6502(): bus_(nullptr), program_counter_(MOS6502_STARTING_PC_ADDRESS), stack_ptr_(0), accumulator_(0), 
                     x_reg_(0), y_reg_(0), processor_status_({.RAW_VALUE=0b00110110}),
                     cycles_elapsed_(0), instruction_(nullptr), instruction_opcode_(0x00), 
                     instruction_cycle_remaining_(0), operand_address_(*this, 0x00), 
                     relative_addressing_offset_(0) {}
 
 void MOS6502::connectBUS(BUS* target_bus) {
-    bus = target_bus;
+    bus_ = target_bus;
     // Do a reset to clear CPU states
     reset();
 }
@@ -239,11 +240,11 @@ void MOS6502::outputCurrentState(std::ostream &out) const {
 }
 
 uint8_t MOS6502::readMemory(const uint16_t& address) const {
-    return bus->readBusData(address);
+    return bus_->readBusData(address);
 }
 
 bool MOS6502::writeMemory(const uint16_t& address, const uint8_t& data) {
-    return bus->writeBusData(address, data);
+    return bus_->writeBusData(address, data);
 }
 
 uint8_t MOS6502::getStatusFlag(const StatusFlag& flag) const {

@@ -2,9 +2,18 @@
 #define _RP2CO2_HPP_
 // Standard Library Headers
 #include <cstdint>
+// Project Headers
+#include "bus.hpp"
 
 class RP2C02 {
 public:
+    /**
+    * @brief  Connects PPU to BUS
+    * @param  None
+    * @return None
+    */
+    void connectBUS(BUS* target_bus);
+
     /**
     * @brief  Reads data from the PPU at the address
     * @param  address: The address to read from
@@ -19,6 +28,10 @@ public:
     * @return True if successfully written, false otherwise
     */
     bool write(const uint16_t& address, const uint8_t& data);
+
+private:
+    BUS* bus_;
+
 };
 
 #endif

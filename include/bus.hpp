@@ -5,6 +5,9 @@
 
 class BUS {
 public:
+    // Destructor
+    virtual ~BUS() = default;
+
     /**
     * @brief  Reads data from the bus at the address
     * @param  address: The address to read from
