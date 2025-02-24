@@ -24,11 +24,32 @@ public:
     */
     ~NES();
 
-
+    /**
+    * @brief  Loads the cartridge from the file path
+    * @param  path: The file path to the cartridge
+    * @return None
+    */
     void loadCartridge(const std::string& path);
 
+    /**
+    * @brief  Releases the cartridge from the NES system
+    * @param  None
+    * @return None
+    */
+    void releaseCartridge();
+
+    /**
+    * @brief  Resets the NES system
+    * @param  None
+    * @return None
+    */
     void reset();
 
+    /**
+    * @brief  Runs 1 clock cycle of the NES system
+    * @param  None
+    * @return None
+    */
     void clock();
 
 private:

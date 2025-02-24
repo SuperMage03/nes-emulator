@@ -20,3 +20,7 @@ void NES::loadCartridge(const std::string& path) {
 
     cartridge_ = Cartridge::makeCartridge(nes_rom);
 }
+
+void NES::releaseCartridge() {
+    cartridge_.reset();
+}

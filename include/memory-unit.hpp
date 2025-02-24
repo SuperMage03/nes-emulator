@@ -15,13 +15,6 @@ public:
     MemoryUnit(const uint32_t& byte_size);
 
     /**
-    * @brief  Constructor for RAM
-    * @param  file_in: The file stream to read and initialize RAM from
-    * @return None
-    */
-    // MemoryUnit(std::ifstream& file_in);
-
-    /**
     * @brief  Reads 1 byte of data at given memory address
     * @param  address: The memory address to read
     * @return Data read at address
@@ -37,11 +30,11 @@ public:
     bool write(const uint16_t& address, const uint8_t& data) const;
 
     /**
-    * @brief  Gets the memory block array
+    * @brief  Gets the pointer to memory block array
     * @param  None
     * @return The memory block array
     */
-    uint8_t* getMemoryBlock() const;
+    uint8_t* getPointer() const;
 
     /**
     * @brief  Gets the size of the memory block
