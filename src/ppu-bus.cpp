@@ -1,6 +1,6 @@
 #include "ppu-bus.hpp"
 
-PPUBUS::PPUBUS(RP2C02& ppu, MemoryUnit& name_table, MemoryUnit& palette_table, std::unique_ptr<Cartridge>& cartridge): 
+PPUBUS::PPUBUS(RP2C02& ppu, MemoryUnit& name_table, MemoryUnit& palette_table, const std::unique_ptr<Cartridge>& cartridge): 
     ppu_{ppu}, name_table_{name_table}, palette_table_{palette_table}, cartridge_{cartridge} {
     ppu_.connectBUS(this);
 }

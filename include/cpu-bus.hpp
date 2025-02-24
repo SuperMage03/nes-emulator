@@ -20,7 +20,7 @@ public:
     * @param  cartridge: Cartridge on the BUS
     * @return None
     */
-    CPUBUS(MOS6502& cpu, MemoryUnit& ram, RP2C02& ppu, std::unique_ptr<Cartridge>& cartridge);
+    CPUBUS(MOS6502& cpu, MemoryUnit& ram, RP2C02& ppu, const std::unique_ptr<Cartridge>& cartridge);
 
     /**
     * @brief  Reads data from the bus at the address
@@ -41,7 +41,7 @@ private:
     MOS6502& cpu_;
     MemoryUnit& ram_;
     RP2C02& ppu_;
-    std::unique_ptr<Cartridge>& cartridge_;
+    const std::unique_ptr<Cartridge>& cartridge_;
 };
 
 #endif

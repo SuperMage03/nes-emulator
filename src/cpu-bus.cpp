@@ -1,6 +1,6 @@
 #include "cpu-bus.hpp"
 
-CPUBUS::CPUBUS(MOS6502& cpu, MemoryUnit& ram, RP2C02& ppu, std::unique_ptr<Cartridge>& cartridge): 
+CPUBUS::CPUBUS(MOS6502& cpu, MemoryUnit& ram, RP2C02& ppu, const std::unique_ptr<Cartridge>& cartridge): 
     cpu_(cpu), ram_(ram), ppu_(ppu), cartridge_(cartridge) {
     cpu_.connectBUS(this);
 }
