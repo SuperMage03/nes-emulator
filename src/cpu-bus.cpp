@@ -18,12 +18,22 @@ uint8_t CPUBUS::readBusData(const uint16_t& address) const {
         return ppu_.read((address - 0x2000) % CPU_BUS_PPU_SIZE);
     }
 
-    // Check if the address is in the range of the Cartridge
-    if ((0x4020 <= address) && (address <= 0xFFFF)) {
-        return cartridge_->readPrgMem(address - 0x4020);
+    if ((0x4000 <= address) && (address <= 0x401F)) {
+        // Emulate the mirroring of the APU and I/O registers
+        return 0;
     }
 
-    return 0;
+    if ((0x4020 <= address) && (address <= 0x5FFF)) {
+        // I don't know what to do here yet
+        return 0;
+    }
+
+    // Logics for the Cartridge read
+    if (!cartridge_) {
+        // We can do something here for when the cartridge is not loaded
+        return 0;
+    }
+    return cartridge_->readPrgMem(address - 0x6000);
 }
 
 bool CPUBUS::writeBusData(const uint16_t& address, const uint8_t& data) {
@@ -39,10 +49,16 @@ bool CPUBUS::writeBusData(const uint16_t& address, const uint8_t& data) {
         return ppu_.write((address - 0x2000) % CPU_BUS_PPU_SIZE, data);
     }
 
-    // Check if the address is in the range of the Cartridge
-    if ((0x4020 <= address) && (address <= 0xFFFF)) {
-        return cartridge_->writeToMapper(address - 0x4020, data);
+    if ((0x4000 <= address) && (address <= 0x401F)) {
+        // Emulate the mirroring of the APU and I/O registers
+        return false;
     }
 
+    if ((0x4020 <= address) && (address <= 0x5FFF)) {
+        // I don't know what to do here yet
+        return false;
+    }
+
+    // CPU can't write to the cartridge
     return false;
 }

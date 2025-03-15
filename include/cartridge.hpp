@@ -31,20 +31,20 @@ public:
     static std::unique_ptr<Cartridge> makeCartridge(std::istream& rom_data_stream);
 
     /**
-    * @brief  Reads the program data from the Cartridge at the address
+    * @brief  Reads the program rom and ram data from the Cartridge at the address
     * @param  address: The address to read from
     * @return Data read from the Cartridge
     */
     uint8_t readPrgMem(const uint16_t& address) const;
 
     /**
-    * @brief  Writes data to the Cartridge Mapper at the address
+    * @brief  Writes data to the Cartridge WRAM at the address
     * @param  address: The address to write to
     * @param  data: The data to write
     * @return True if successfully written, false otherwise
     */
-    bool writeToMapper(const uint16_t& address, const uint8_t& data);
-    
+    bool writeToPrgMem(const uint16_t& address, const uint8_t& data);
+
     /**
     * @brief  Reads the pattern table data from the Cartridge at the address
     * @param  address: The address to read from
@@ -62,12 +62,13 @@ public:
 
 protected:
     // Constructor
-    explicit Cartridge(const uint8_t& mapper_id, const uint32_t& program_memory_size, const uint32_t& pattern_memory_size);
+    explicit Cartridge(const uint8_t& mapper_id, const uint32_t& prg_rom_size, const uint32_t& chr_rom_size);
 
 private:
-    std::unique_ptr<Mapper> mapper_;
-    MemoryUnit prg_memory_;
+    MemoryUnit prg_ram_memory_;
+    MemoryUnit prg_rom_memory_;
     MemoryUnit chr_memory_;
+    std::unique_ptr<Mapper> mapper_;
 };
 
 #endif
