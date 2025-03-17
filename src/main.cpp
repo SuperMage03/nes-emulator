@@ -1,10 +1,19 @@
+// External Library Headers
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
+// Project Headers
+#include "nes-window-sfml.hpp"
+#include "nes.hpp"
 
 int main(int argc, char* argv[]) {
     sf::RenderWindow window(sf::VideoMode({256, 224}), "NES Emulator");
+    // We will use SFML framerate limit to control the speed of the emulator
+    window.setFramerateLimit(60);
 
-    sf::RectangleShape pixel({1, 1});
+    NES nes;
+    NESWindowSFML nes_window(window);
+    nes.connectDisplayWindow(nes_window);
+    nes.loadCartridge("./tests/color_test.nes");
 
     // run the program as long as the window is open
     while (window.isOpen()) {
@@ -14,22 +23,7 @@ int main(int argc, char* argv[]) {
             if (event->is<sf::Event::Closed>())
                 window.close();
         }
-        window.clear();
-        unsigned int counter = 0;
-        for (float x = 0.0f; x < 256.0f; x += 1.0f) {
-            for (float y = 0.0f; y < 224.0f; y += 1.0f) {
-                pixel.setPosition({x, y});
-                if (counter % 2 == 0) {
-                    pixel.setFillColor({0, 0, 0});
-                }
-                else {
-                    pixel.setFillColor({255, 255, 255});
-                }
-                window.draw(pixel);
-                counter++;
-            }
-            counter++;
-        }
+        nes.stepFrame();
         window.display();
     }
     return 0;

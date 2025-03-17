@@ -6,9 +6,13 @@
 #include "cartridge.hpp"
 
 NES::NES(): 
-    cpu_(), ram_(CPU_BUS_RAM_SIZE), 
+    clock_count_(0), cpu_(), ram_(CPU_BUS_RAM_SIZE), 
     ppu_(), name_table_(PPU_BUS_NAME_TABLE_SIZE), palette_table_(PPU_BUS_PALETTE_TABLE_SIZE), 
     cartridge_(nullptr), cpu_bus_(cpu_, ram_, ppu_, cartridge_), ppu_bus_(ppu_, name_table_, palette_table_, cartridge_) {}
+
+void NES::connectDisplayWindow(NESWindow& window) {
+    ppu_.connectDisplayWindow(&window);
+}
 
 void NES::loadCartridge(const std::string& path) {
     // Open the file
@@ -23,4 +27,18 @@ void NES::loadCartridge(const std::string& path) {
 
 void NES::releaseCartridge() {
     cartridge_.reset();
+}
+
+void NES::clock() {
+    ppu_.runCycle();
+    if (clock_count_ % 3 == 0) {
+        cpu_.runCycle();
+    }
+    clock_count_++;
+}
+
+void NES::stepFrame() {
+    for (uint64_t i = 0; i <= 89000; i++) {
+        clock();
+    }
 }

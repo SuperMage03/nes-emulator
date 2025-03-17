@@ -1,6 +1,7 @@
 #ifndef _NES_HPP_
 #define _NES_HPP_
-
+// Project Headers
+#include "nes-window.hpp"
 #include "cartridge.hpp"
 #include "mos6502.hpp"
 #include "memory-unit.hpp"
@@ -18,11 +19,11 @@ public:
     NES();
 
     /**
-    * @brief  Destructor for NES
-    * @param  None
+    * @brief  Connects the NES system to the display window
+    * @param  window: The display window to connect to
     * @return None
     */
-    ~NES();
+    void connectDisplayWindow(NESWindow& window);
 
     /**
     * @brief  Loads the cartridge from the file path
@@ -52,7 +53,15 @@ public:
     */
     void clock();
 
+    /**
+    * @brief  Runs 1 frame update of the NES system
+    * @param  None
+    * @return None
+    */
+    void stepFrame();
+
 private:
+    uint64_t clock_count_;
     MOS6502 cpu_;
     MemoryUnit ram_;
     RP2C02 ppu_;

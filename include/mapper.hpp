@@ -4,6 +4,7 @@
 #include <memory>
 #include <cstdint>
 // Project Define
+// 0x0000 to 0x1FFF is reserved for PRG RAM
 #define MAPPER_PRG_RAM_REGION_SIZE 0x2000
 
 class Mapper {
