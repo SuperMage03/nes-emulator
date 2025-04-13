@@ -13,12 +13,11 @@ class PPUBUS : public BUS {
 public:
     /**
     * @brief  Constructor for BUS
-    * @param  name_table: Name Table on the BUS
-    * @param  palette_table: Palette Table on the BUS
+    * @param  vram: RAM for PPU (Stores Two Name Tables)
     * @param  cartridge: Cartridge on the BUS
     * @return None
     */
-    PPUBUS(RP2C02& ppu, MemoryUnit& name_table, MemoryUnit& palette_table, const std::unique_ptr<Cartridge>& cartridge);
+    PPUBUS(RP2C02& ppu, MemoryUnit& vram, const std::unique_ptr<Cartridge>& cartridge);
 
     /**
     * @brief  Reads data from the bus at the address
@@ -37,8 +36,7 @@ public:
 
 private:
     RP2C02& ppu_;
-    MemoryUnit& name_table_;
-    MemoryUnit& palette_table_;
+    MemoryUnit& vram_;
     const std::unique_ptr<Cartridge>& cartridge_;
 };
 

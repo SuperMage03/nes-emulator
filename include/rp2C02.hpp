@@ -1,6 +1,7 @@
 #ifndef _RP2CO2_HPP_
 #define _RP2CO2_HPP_
 // Standard Library Headers
+#include <array>
 #include <cstdint>
 // Project Headers
 #include "nes-window.hpp"
@@ -8,6 +9,84 @@
 
 class RP2C02 {
 public:
+    struct AddressRegister {
+        union {
+            struct {
+                uint8_t LO;
+                uint8_t HI;
+            };
+            uint16_t address;
+        };
+        bool is_high_byte_selected;
+    };
+
+    union ControlRegister {
+        struct {
+            uint8_t NAMETABLE : 2;
+            uint8_t VRAM_ADDRESS_INCREMENT : 1;
+            uint8_t SPRITE_PATTERN_ADDRESS : 1;
+            uint8_t BACKGROUND_PATTERN_ADDRESS : 1;
+            uint8_t SPRITE_SIZE : 1;
+            uint8_t MASTER_SLAVE_SELECT : 1;
+            uint8_t GENERATE_NMI : 1;
+        };
+        uint8_t raw_val;
+    };
+
+    union MaskRegister {
+        struct {
+            uint8_t GREYSCALE : 1;
+            uint8_t BACKGROUND_LEFT_COL_ENABLE : 1;
+            uint8_t SPRITE_LEFT_COL_ENABLE : 1;
+            uint8_t BACKGROUND_ENABLE : 1;
+            uint8_t SPRITE_ENABLE : 1;
+            uint8_t COLOUR_EMPHASIS : 3;
+        };
+        uint8_t raw_val;
+    };
+
+    union StatusRegister {
+        struct {
+            uint8_t UNUSED : 5;
+            uint8_t SPRITE_OVERFLOW : 1;
+            uint8_t SPRITE_ZERO_HIT : 1;
+            uint8_t VBLANK : 1;
+        };
+        uint8_t raw_val;
+    };
+
+    struct ScrollRegister {
+        union {
+            struct {
+                uint8_t Y;
+                uint8_t X;
+            };
+            uint16_t raw_val;
+        };
+        bool is_x_byte_selected;
+    };
+
+    struct Sprite {
+        uint8_t y;
+        uint8_t tile_index;
+        uint8_t attributes;
+        uint8_t x;
+    };
+
+    struct NameTable {
+        std::array<uint8_t, 0x3C0> tile_data;
+        std::array<uint8_t, 0x40> palette_data;
+    };
+
+    struct Colour {
+        uint8_t r;
+        uint8_t g;
+        uint8_t b;
+    };
+
+    // Constructor
+    RP2C02();
+
     /**
     * @brief  Connects PPU to Display Window
     * @param  window: The NES Window to connect to
@@ -30,21 +109,75 @@ public:
     void runCycle();
 
     /**
-    * @brief  Reads data from the PPU at the address
+    * @brief  Reads data from the Palette Table at the address
     * @param  address: The address to read from
     * @return Data read from the PPU
     */
-    uint8_t read(const uint16_t& address) const;
+    uint8_t readPaletteTable(const uint16_t& address) const;
     
     /**
-    * @brief  Writes data to the PPU at the address
+    * @brief  Writes data to the Palette Table at the address
     * @param  address: The address to write to
     * @param  data: The data to write
     * @return True if successfully written, false otherwise
     */
-    bool write(const uint16_t& address, const uint8_t& data);
+    bool writePaletteTable(const uint16_t& address, const uint8_t& data);
+
+    /**
+    * @brief  Reads data from the PPU register at the address
+    * @param  address: The address to read from
+    * @param  chip_select_signal: The chip select signal
+    * @return Data read from the PPU
+    */
+    uint8_t readRegister(const uint8_t& address, const bool& chip_select_signal);
+    
+    /**
+    * @brief  Writes data to the PPU register at the address
+    * @param  address: The address to write to
+    * @param  chip_select_signal: The chip select signal
+    * @param  data: The data to write
+    * @return True if successfully written, false otherwise
+    */
+    bool writeRegister(const uint8_t& address, const bool& chip_select_signal, const uint8_t& data);
+
+    /**
+    * @brief  Setter for read_from_data_buffer_
+    * @param  value: new value
+    * @return None
+    */
+    void setReadFromDataBuffer(const bool& value);
 
 private:
+    // Colour Palette for display
+    std::array<Colour, 0x40> colour_palette_;
+    // Palette Table (Keeps the palette table used on screen)
+    std::array<uint8_t, 0x20> palette_table_;
+    // OAM (Keeps the state of the sprites)
+    std::array<uint8_t, 0x100> oam_;
+
+    // ------------ Internal PPU Registers ------------
+    // 0x0000 (Internally) -> 0x2000 (CPU Address)
+    ControlRegister control_register_{.raw_val=0x0000};
+    // 0x0001 (Internally) -> 0x2001 (CPU Address)
+    MaskRegister mask_register_{.raw_val=0x0000};
+    // 0x0002 (Internally) -> 0x2002 (CPU Address)
+    StatusRegister status_register_{.raw_val=0x0000};
+    // 0x0003 (Internally) -> 0x2003 (CPU Address)
+    uint8_t oam_address_;
+    // 0x0004 (Internally) -> 0x2004 (CPU Address)
+    uint8_t oam_data_;
+    // 0x0005 (Internally) -> 0x2005 (CPU Address)
+    ScrollRegister scroll_register_{.raw_val=0x0000, .is_x_byte_selected=true};
+    // 0x0006 (Internally) -> 0x2006 (CPU Address)
+    AddressRegister address_register_{.address=0x0000, .is_high_byte_selected=true};
+    // 0x0007 (Internally) -> 0x2007 (CPU Address)
+    uint8_t data_buffer_;
+    // 0x4014 (Internally) -> 0x4014 (CPU Address)
+    uint8_t oam_dma_;
+
+    // Helper Variables
+    bool read_from_data_buffer_;
+    
     uint64_t cycles_elapsed_;
     uint16_t drawing_row;
     uint16_t drawing_col;

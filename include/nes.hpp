@@ -65,7 +65,7 @@ private:
     MOS6502 cpu_;
     MemoryUnit ram_;
     RP2C02 ppu_;
-    MemoryUnit name_table_;
+    MemoryUnit vram_;
     MemoryUnit palette_table_;    
     std::unique_ptr<Cartridge> cartridge_;
     CPUBUS cpu_bus_;

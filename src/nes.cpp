@@ -7,8 +7,8 @@
 
 NES::NES(): 
     clock_count_(0), cpu_(), ram_(CPU_BUS_RAM_SIZE), 
-    ppu_(), name_table_(PPU_BUS_NAME_TABLE_SIZE), palette_table_(PPU_BUS_PALETTE_TABLE_SIZE), 
-    cartridge_(nullptr), cpu_bus_(cpu_, ram_, ppu_, cartridge_), ppu_bus_(ppu_, name_table_, palette_table_, cartridge_) {}
+    ppu_(), vram_(PPU_BUS_NAME_TABLE_SIZE), palette_table_(PPU_BUS_PALETTE_TABLE_SIZE), 
+    cartridge_(nullptr), cpu_bus_(cpu_, ram_, ppu_, cartridge_), ppu_bus_(ppu_, vram_, cartridge_) {}
 
 void NES::connectDisplayWindow(NESWindow& window) {
     ppu_.connectDisplayWindow(&window);

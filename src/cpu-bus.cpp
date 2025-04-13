@@ -15,12 +15,12 @@ uint8_t CPUBUS::readBusData(const uint16_t& address) const {
     // Check if the address is in the range of the PPU registers
     if ((0x2000 <= address) && (address <= 0x3FFF)) {
         // Emulate the mirroring of the PPU registers
-        return ppu_.read((address - 0x2000) % CPU_BUS_PPU_SIZE);
+        return ppu_.readRegister(address & 0b00000111, false);
     }
 
     if ((0x4000 <= address) && (address <= 0x401F)) {
         // Emulate the mirroring of the APU and I/O registers
-        return 0;
+        return ppu_.readRegister(address & 0b00000111, true);
     }
 
     if ((0x4020 <= address) && (address <= 0x5FFF)) {
@@ -46,12 +46,11 @@ bool CPUBUS::writeBusData(const uint16_t& address, const uint8_t& data) {
     // Check if the address is in the range of the PPU registers
     if ((0x2000 <= address) && (address <= 0x3FFF)) {
         // Emulate the mirroring of the PPU registers
-        return ppu_.write((address - 0x2000) % CPU_BUS_PPU_SIZE, data);
+        return ppu_.writeRegister(address & 0b00000111, false, data);
     }
 
     if ((0x4000 <= address) && (address <= 0x401F)) {
-        // Emulate the mirroring of the APU and I/O registers
-        return false;
+        return ppu_.writeRegister(address & 0b00000111, true, data);
     }
 
     if ((0x4020 <= address) && (address <= 0x5FFF)) {
