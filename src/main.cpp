@@ -6,12 +6,11 @@
 #include "nes.hpp"
 
 int main(int argc, char* argv[]) {
-    sf::RenderWindow window(sf::VideoMode({600, 600}), "NES Emulator");
-    // We will use SFML framerate limit to control the speed of the emulator
+    NESWindowSFML nes_window;
+    sf::RenderWindow& window = nes_window.getWindow();
     window.setFramerateLimit(60);
-
+    
     NES nes;
-    NESWindowSFML nes_window(window);
     nes.connectDisplayWindow(nes_window);
     nes.loadCartridge("./tests/pac_man.nes");
 

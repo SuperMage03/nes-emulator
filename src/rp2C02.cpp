@@ -1,6 +1,4 @@
 #include "rp2C02.hpp"
-// REMOVE ME
-#include <cstdlib>
 #include <stdexcept>
 
 RP2C02::RP2C02(): 
