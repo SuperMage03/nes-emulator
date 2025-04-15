@@ -31,9 +31,19 @@ void NES::releaseCartridge() {
 
 void NES::clock() {
     ppu_.runCycle();
+
+    // Run CPU cycle every 3 PPU cycles
     if (clock_count_ % 3 == 0) {
         cpu_.runCycle();
     }
+
+    // PPU Request to trigger NMI
+	if (ppu_.getNMIFlag()) {
+		cpu_.nmi();
+        ppu_.setNMIFlag(false);
+	}
+
+    // Increase total system clock count
     clock_count_++;
 }
 
