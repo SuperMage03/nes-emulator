@@ -1,6 +1,8 @@
 #include "mos6502.hpp"
 // Stardard Library Headers
 #include <bitset>
+#include <iomanip>
+#include <sstream>
 // Project Headers
 #include "bus.hpp"
 
@@ -138,6 +140,77 @@ void MOS6502::runCycle() {
     }
 
     instruction_cycle_remaining_--;
+}
+
+std::pair<std::string, uint8_t> MOS6502::disassembleInstruction(const uint16_t& address) const {
+    std::stringstream ss;
+    uint8_t opcode = readMemory(address);
+    const Instruction& instruction = instruction_lookup_table.at(opcode);
+
+    ss << std::uppercase << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(address);
+    ss << ": ";
+    ss << instruction.name;
+    ss << " ";
+    if (instruction.addressingMode == MOS6502::IMP) {
+        return {ss.str(), 1};
+    }
+    if (instruction.addressingMode == MOS6502::IMM) {
+        ss << "#$" << std::hex << static_cast<int>(readMemory(address + 1));
+        return {ss.str(), 2};
+    }
+    if (instruction.addressingMode == MOS6502::ZP0) {
+        ss << "$" << std::hex << static_cast<int>(readMemory(address + 1));
+        return {ss.str(), 2};
+    }
+    if (instruction.addressingMode == MOS6502::ZPX) {
+        ss << "$" << std::hex << static_cast<int>(readMemory(address + 1)) << ",X";
+        return {ss.str(), 2};
+    }
+    if (instruction.addressingMode == MOS6502::ZPY) {
+        ss << "$" << std::hex << static_cast<int>(readMemory(address + 1)) << ",Y";
+        return {ss.str(), 2};
+    }
+    if (instruction.addressingMode == MOS6502::IZX) {
+        ss << "($" << std::hex << static_cast<int>(readMemory(address + 1)) << ",X)";
+        return {ss.str(), 2};
+    }
+    if (instruction.addressingMode == MOS6502::IZY) {
+        ss << "($" << std::hex << static_cast<int>(readMemory(address + 1)) << "),Y";
+        return {ss.str(), 2};
+    }
+    if (instruction.addressingMode == MOS6502::ABS) {
+        ss << "$" << std::hex 
+           << (static_cast<int>(readMemory(address + 2)) | (static_cast<int>(readMemory(address + 1)) << 8));
+        return {ss.str(), 3};
+    }
+    if (instruction.addressingMode == MOS6502::ABX) {
+        ss << "$" 
+           << std::hex 
+           << (static_cast<int>(readMemory(address + 2)) | (static_cast<int>(readMemory(address + 1)) << 8))
+           << ",X";
+        return {ss.str(), 3};
+    }
+    if (instruction.addressingMode == MOS6502::ABY) {
+        ss << "$" 
+           << std::hex 
+           << (static_cast<int>(readMemory(address + 2)) | (static_cast<int>(readMemory(address + 1)) << 8))
+           << ",Y";
+        return {ss.str(), 3};
+    }
+    if (instruction.addressingMode == MOS6502::IND) {
+        ss << "($" 
+           << std::hex 
+           << (static_cast<int>(readMemory(address + 2)) | (static_cast<int>(readMemory(address + 1)) << 8))
+           << ")";
+        return {ss.str(), 3};
+    }
+    if (instruction.addressingMode == MOS6502::REL) {
+        ss << "$" 
+           << std::hex
+           << (static_cast<int>(readMemory(address + 1)) + address + 2);
+        return {ss.str(), 2};
+    }
+    return {"ERROR", 1};
 }
 
 // ------------------------ EXTERNAL INTERRUPTS --------------------------------

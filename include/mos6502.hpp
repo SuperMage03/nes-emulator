@@ -71,6 +71,13 @@ public:
     void runCycle();
 
     /**
+    * @brief  Disassembles the instruction at the given address
+    * @param  address: The address to decode the instruction from
+    * @return The decoded instruction and the length of the instruction
+    */
+    std::pair<std::string, uint8_t> disassembleInstruction(const uint16_t& address) const;
+
+    /**
     * @brief  Resets the CPU
     * @param  None
     * @return None
