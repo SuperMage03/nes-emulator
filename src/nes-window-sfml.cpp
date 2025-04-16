@@ -7,10 +7,17 @@ NESWindowSFML::~NESWindowSFML() {
     window_.close();
 }
 
-void NESWindowSFML::setPixel(const uint16_t& x, const uint16_t& y, const uint8_t& r, const uint8_t& g, const uint8_t& b) {
-    pixel_.setPosition({static_cast<float>(x), static_cast<float>(y)});
-    pixel_.setFillColor({r, g, b});
-    window_.draw(pixel_);
+void NESWindowSFML::render() {
+    window_.clear(sf::Color::Black);
+    for (unsigned int y = 0; y < NES_WINDOW_PIXEL_BUFFER_HEIGHT; y++) {
+        for (unsigned int x = 0; x < NES_WINDOW_PIXEL_BUFFER_WIDTH; x++) {
+            NESWindow::Colour& pixel_colour = pixel_buffer_[y * NES_WINDOW_PIXEL_BUFFER_WIDTH + x];
+            pixel_.setPosition({static_cast<float>(x), static_cast<float>(y)});
+            pixel_.setFillColor({pixel_colour.r, pixel_colour.g, pixel_colour.b});
+            window_.draw(pixel_);
+        }
+    }
+    window_.display();
 }
 
 sf::RenderWindow& NESWindowSFML::getWindow() {
