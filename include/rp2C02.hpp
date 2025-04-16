@@ -6,8 +6,6 @@
 // Project Headers
 #include "nes-window.hpp"
 #include "bus.hpp"
-// Project Defines
-#define RP2C02_PATTERN_TABLE_PIXEL_COUNT 0x4000
 
 class RP2C02 {
 public:
@@ -25,7 +23,7 @@ public:
     union ControlRegister {
         struct {
             uint8_t NAMETABLE : 2;
-            uint8_t VRAM_ADDRESS_INCREMENT : 1;
+            uint8_t VRAM_ADDRESS_INCREMENT_MODE : 1;
             uint8_t SPRITE_PATTERN_ADDRESS : 1;
             uint8_t BACKGROUND_PATTERN_ADDRESS : 1;
             uint8_t SPRITE_SIZE : 1;
@@ -73,14 +71,8 @@ public:
         std::array<uint8_t, 0x40> palette_data;
     };
 
-    struct Colour {
-        uint8_t r;
-        uint8_t g;
-        uint8_t b;
-    };
-
     struct Tile {
-        std::array<Colour, 0x40> pixel_colour;
+        std::array<NESWindow::Colour, 0x40> pixel_colour;
     };
 
     // Constructor
@@ -160,32 +152,22 @@ public:
     */
     void setNMIFlag(const bool& value);
 
-
-    /**
-    * @brief  Updates the pattern table cache and returns the pattern table cache
-    * @param  pattern_table_index: The index of the pattern table
-    * @param  palette_id: The ID of the palette
-    * @return Reference to the pattern table cache
-    */
-    const std::array<Colour, RP2C02_PATTERN_TABLE_PIXEL_COUNT>& getPatternTableCache(const uint8_t& pattern_table_index, const uint8_t& palette_id);
-
     /**
     * @brief  Gets the colour from the palette
     * @param  palette_id: The ID of the palette
     * @param  pixel_colour_value: The pixel colour value
     * @return Colour from the palette
     */
-    Colour getColourFromPalette(const uint8_t& palette_id, const uint8_t& pixel_colour_value) const;
+    NESWindow::Colour getColourFromPalette(const uint8_t& palette_id, const uint8_t& pixel_colour_value) const;
 
     /**
     * @brief  Gets the tile from the pattern table
     * @param  tile_index: The index of the tile
     * @param  pattern_table_index: The index of the pattern table
     * @param  palette_id: The ID of the palette
-    * @param  out: The tile to be filled with the pixel data
-    * @return None
+    * @return Tile from the pattern table
     */
-    void getTile(const uint8_t& tile_index, const uint8_t& pattern_table_index, const uint8_t& palette_id, Tile& out) const;
+    Tile getTileFromPatternTable(const uint8_t& tile_index, const uint8_t& pattern_table_index, const uint8_t& palette_id) const;
 
     /**
     * @brief  Gets mirrored vram address
@@ -196,7 +178,7 @@ public:
 
 private:
     // Colour Palette for display
-    std::array<Colour, 0x40> colour_palette_;
+    std::array<NESWindow::Colour, 0x40> colour_palette_;
     // Palette Table (Keeps the palette table used on screen)
     std::array<uint8_t, 0x20> palette_table_;
     // OAM (Keeps the state of the sprites)
@@ -224,7 +206,6 @@ private:
 
     // Internal Helper Variables
     bool read_from_data_buffer_;
-    std::array<Colour, RP2C02_PATTERN_TABLE_PIXEL_COUNT> pattern_table_cache_[2];
     
     // PPU Emulator Variables
     bool nmi_requested_;

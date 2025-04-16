@@ -23,6 +23,7 @@ void NES::loadCartridge(const std::string& path) {
     }
 
     cartridge_ = Cartridge::makeCartridge(nes_rom);
+    cpu_.reset();
 }
 
 void NES::releaseCartridge() {
@@ -48,7 +49,7 @@ void NES::clock() {
 }
 
 void NES::stepFrame() {
-    for (uint64_t i = 0; i <= 89000; i++) {
+    for (uint64_t i = 0; i < 89342; i++) {
         clock();
     }
 }

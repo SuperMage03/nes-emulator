@@ -70,6 +70,9 @@ private:
     std::unique_ptr<Cartridge> cartridge_;
     CPUBUS cpu_bus_;
     PPUBUS ppu_bus_;
+
+    // Friending classes for access to private members
+    friend class NESDebugWindow;
 };
 
 #endif

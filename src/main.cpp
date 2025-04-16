@@ -3,25 +3,21 @@
 #include <SFML/Graphics.hpp>
 // Project Headers
 #include "nes-window-sfml.hpp"
+#include "nes-debug-window.hpp"
 #include "nes.hpp"
 
 int main(int argc, char* argv[]) {
     NESWindowSFML nes_window;
     sf::RenderWindow& window = nes_window.getWindow();
-    window.setFramerateLimit(60);
-    
+    window.setFramerateLimit(0);
+    // Create a new NESDebugWindow
+    NESDebugWindow nes_debug_window;
+
     NES nes;
     nes.connectDisplayWindow(nes_window);
-    nes.loadCartridge("./tests/pac_man.nes");
+    nes.loadCartridge("./tests/donkey_kong.nes");
 
-    const auto onClose = [&window](const sf::Event::Closed&) {
-        window.close();
-    };
-    
-    const auto onKeyPressed = [&window](const sf::Event::KeyPressed& keyPressed) {
-        if (keyPressed.scancode == sf::Keyboard::Scancode::Escape)
-            window.close();
-    };
+    nes_debug_window.attachNES(&nes);
 
     // run the program as long as the window is open
     while (window.isOpen()) {
@@ -36,14 +32,17 @@ int main(int argc, char* argv[]) {
                     case sf::Keyboard::Scancode::Escape:
                         window.close();
                         break;
+                    case sf::Keyboard::Scancode::Space:
+                        nes.stepFrame();
+                        break;
                     default:
                         break;
-                
                 }
             }
         }
         nes.stepFrame();
-        window.display();
+        nes_debug_window.update();
+        nes_window.render();
     }
     return 0;
 }

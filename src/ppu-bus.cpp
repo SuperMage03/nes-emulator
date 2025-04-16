@@ -25,7 +25,12 @@ uint8_t PPUBUS::readBusData(const uint16_t& address) const {
     // Retrieve palette data from the Palette Table
     if ((0x3F00 <= address) && (address <= 0x3FFF)) {
         ppu_.setReadFromDataBuffer(false);
-        return ppu_.readPaletteTable((address - 0x3F00) % 0x0020);
+        uint16_t palette_address = (address - 0x3F00) % 0x0020;
+        if (palette_address == 0x0010) palette_address = 0x0000;
+		if (palette_address == 0x0014) palette_address = 0x0004;
+		if (palette_address == 0x0018) palette_address = 0x0008;
+		if (palette_address == 0x001C) palette_address = 0x000C;
+        return ppu_.readPaletteTable(palette_address);
     }
 
     // Retrieve mirror of 0x0000 to 0x3FFF
@@ -49,7 +54,12 @@ bool PPUBUS::writeBusData(const uint16_t& address, const uint8_t& data) {
 
     // Write data to the Palette Table
     if ((0x3F00 <= address) && (address <= 0x3FFF)) {
-        return ppu_.writePaletteTable((address - 0x3F00) % 0x0020, data);
+        uint16_t palette_address = (address - 0x3F00) % 0x0020;
+        if (palette_address == 0x0010) palette_address = 0x0000;
+		if (palette_address == 0x0014) palette_address = 0x0004;
+		if (palette_address == 0x0018) palette_address = 0x0008;
+		if (palette_address == 0x001C) palette_address = 0x000C;
+        return ppu_.writePaletteTable(palette_address, data);
     }
     
     // Write data to the mirror of 0x0000 to 0x3FFF
