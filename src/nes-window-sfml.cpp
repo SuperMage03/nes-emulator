@@ -1,22 +1,29 @@
 #include "nes-window-sfml.hpp"
+#include "nes-window.hpp"
 
 NESWindowSFML::NESWindowSFML(const unsigned int& window_width, const unsigned int& window_height, const std::string& window_title): 
-    window_(sf::VideoMode({window_width, window_height}), window_title), pixel_({1, 1}) {}
+    window_(sf::VideoMode(sf::Vector2u{window_width, window_height}), window_title),
+    display_texture_(sf::Vector2u{NES_WINDOW_WIDTH, NES_WINDOW_HEIGHT}),
+    display_sprite_(display_texture_),
+    pixel_buffer_(std::make_unique<uint8_t[]>(NES_WINDOW_WIDTH * NES_WINDOW_HEIGHT * 4)) {}
 
 NESWindowSFML::~NESWindowSFML() {
     window_.close();
 }
 
+void NESWindowSFML::setPixel(const uint16_t& x, const uint16_t& y, const Colour& colour) {
+    if (x < NES_WINDOW_WIDTH && y < NES_WINDOW_HEIGHT) {
+        pixel_buffer_[(y * NES_WINDOW_WIDTH + x) * 4 + 0] = colour.r;
+        pixel_buffer_[(y * NES_WINDOW_WIDTH + x) * 4 + 1] = colour.g;
+        pixel_buffer_[(y * NES_WINDOW_WIDTH + x) * 4 + 2] = colour.b;
+        pixel_buffer_[(y * NES_WINDOW_WIDTH + x) * 4 + 3] = 255; // Solid Alpha
+    }
+}
+
 void NESWindowSFML::render() {
     window_.clear(sf::Color::Black);
-    for (unsigned int y = 0; y < NES_WINDOW_PIXEL_BUFFER_HEIGHT; y++) {
-        for (unsigned int x = 0; x < NES_WINDOW_PIXEL_BUFFER_WIDTH; x++) {
-            NESWindow::Colour& pixel_colour = pixel_buffer_[y * NES_WINDOW_PIXEL_BUFFER_WIDTH + x];
-            pixel_.setPosition({static_cast<float>(x), static_cast<float>(y)});
-            pixel_.setFillColor({pixel_colour.r, pixel_colour.g, pixel_colour.b});
-            window_.draw(pixel_);
-        }
-    }
+    display_texture_.update(pixel_buffer_.get());
+    window_.draw(display_sprite_);
     window_.display();
 }
 

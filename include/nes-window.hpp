@@ -2,10 +2,9 @@
 #define _NES_WINDOW_HPP_
 // Standard Library Headers
 #include <cstdint>
-#include <memory>
 // Project Defines
-#define NES_WINDOW_PIXEL_BUFFER_WIDTH  256
-#define NES_WINDOW_PIXEL_BUFFER_HEIGHT 240
+#define NES_WINDOW_WIDTH  256
+#define NES_WINDOW_HEIGHT 240
 
 class NESWindow {
 public:
@@ -14,9 +13,6 @@ public:
         uint8_t g;
         uint8_t b;
     };
-
-    // Constructor
-    NESWindow();
 
     // Destructor
     virtual ~NESWindow() = default;
@@ -30,7 +26,7 @@ public:
     * @param  b: The blue value of the pixel
     * @return None
     */
-    void setPixel(const uint16_t& x, const uint16_t& y, const Colour& colour);
+    virtual void setPixel(const uint16_t& x, const uint16_t& y, const Colour& colour) = 0;
 
     /**
     * @brief  Renders the pixel buffer to the display window
@@ -38,9 +34,6 @@ public:
     * @return None
     */
     virtual void render() = 0;
-
-protected:
-    std::unique_ptr<Colour[]> pixel_buffer_;
 };
 
 #endif

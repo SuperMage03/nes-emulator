@@ -11,8 +11,16 @@ static std::string int_to_hex(T i) {
 }
 
 NESDebugWindow::NESDebugWindow(): 
-    nes_{nullptr}, window_{sf::VideoMode({NES_DEBUG_WINDOW_WIDTH, NES_DEBUG_WINDOW_HEIGHT}), NES_DEBUG_WINDOW_TITLE} {
-    window_.setFramerateLimit(0);
+    nes_{nullptr}, window_{sf::VideoMode({NES_DEBUG_WINDOW_WIDTH, NES_DEBUG_WINDOW_HEIGHT}), NES_DEBUG_WINDOW_TITLE},
+    name_table_0_texture_{sf::Vector2u{NES_DEBUG_WINDOW_NAME_TABLE_WIDTH, NES_DEBUG_WINDOW_NAME_TABLE_HEIGHT}},
+    name_table_1_texture_{sf::Vector2u{NES_DEBUG_WINDOW_NAME_TABLE_WIDTH, NES_DEBUG_WINDOW_NAME_TABLE_HEIGHT}},
+    name_table_0_sprite_{name_table_0_texture_},
+    name_table_1_sprite_{name_table_1_texture_},
+    name_table_0_pixel_buffer_{std::make_unique<uint8_t[]>(NES_DEBUG_WINDOW_NAME_TABLE_WIDTH * NES_DEBUG_WINDOW_NAME_TABLE_HEIGHT * 4)},
+    name_table_1_pixel_buffer_{std::make_unique<uint8_t[]>(NES_DEBUG_WINDOW_NAME_TABLE_WIDTH * NES_DEBUG_WINDOW_NAME_TABLE_HEIGHT * 4)} {
+    window_.setFramerateLimit(60);
+    name_table_0_sprite_.setPosition({60, 520});
+    name_table_1_sprite_.setPosition({128 + NES_DEBUG_WINDOW_NAME_TABLE_WIDTH, 520});
 }
 
 NESDebugWindow::~NESDebugWindow() {
@@ -65,7 +73,6 @@ void NESDebugWindow::update() {
     text.setPosition({10, 100});
     window_.draw(text);
     
-    
     uint16_t address_to_disassemble = cpu_state.program_counter;
     for (int i = 0; i <= 5; i++) {
         auto[disassembled_instruction_text, instruction_size] = nes_->cpu_.disassembleInstruction(address_to_disassemble);
@@ -74,8 +81,6 @@ void NESDebugWindow::update() {
         window_.draw(text);
         address_to_disassemble += instruction_size;
     }
-
-    sf::RectangleShape pixel{{1, 1}};
 
     RP2C02::NameTable* name_table = reinterpret_cast<RP2C02::NameTable*>(nes_->vram_.getPointer());
     for (uint8_t name_table_index = 0; name_table_index < 2; name_table_index++) {
@@ -108,14 +113,27 @@ void NESDebugWindow::update() {
                 for (uint8_t pixel_y = 0; pixel_y < 8; pixel_y++) {
                     for (uint8_t pixel_x = 0; pixel_x < 8; pixel_x++) {
                         NESWindow::Colour& cur_pixel_colour = tile.pixel_colour.at(pixel_y * 8 + pixel_x);
-                        pixel.setFillColor(sf::Color(cur_pixel_colour.r, cur_pixel_colour.g, cur_pixel_colour.b));
-                        pixel.setPosition({static_cast<float>(60 + name_table_index * 324 + tile_x * 8 + pixel_x), static_cast<float>(520 + tile_y * 8 + pixel_y)});
-                        window_.draw(pixel);
+
+                        if (name_table_index == 0) {
+                            name_table_0_pixel_buffer_[((tile_y * 8 + pixel_y) * NES_DEBUG_WINDOW_NAME_TABLE_WIDTH + (tile_x * 8 + pixel_x)) * 4 + 0] = cur_pixel_colour.r;
+                            name_table_0_pixel_buffer_[((tile_y * 8 + pixel_y) * NES_DEBUG_WINDOW_NAME_TABLE_WIDTH + (tile_x * 8 + pixel_x)) * 4 + 1] = cur_pixel_colour.g;
+                            name_table_0_pixel_buffer_[((tile_y * 8 + pixel_y) * NES_DEBUG_WINDOW_NAME_TABLE_WIDTH + (tile_x * 8 + pixel_x)) * 4 + 2] = cur_pixel_colour.b;
+                            name_table_0_pixel_buffer_[((tile_y * 8 + pixel_y) * NES_DEBUG_WINDOW_NAME_TABLE_WIDTH + (tile_x * 8 + pixel_x)) * 4 + 3] = 255; // Solid Alpha
+                        } else {
+                            name_table_1_pixel_buffer_[((tile_y * 8 + pixel_y) * NES_DEBUG_WINDOW_NAME_TABLE_WIDTH + (tile_x * 8 + pixel_x)) * 4 + 0] = cur_pixel_colour.r;
+                            name_table_1_pixel_buffer_[((tile_y * 8 + pixel_y) * NES_DEBUG_WINDOW_NAME_TABLE_WIDTH + (tile_x * 8 + pixel_x)) * 4 + 1] = cur_pixel_colour.g;
+                            name_table_1_pixel_buffer_[((tile_y * 8 + pixel_y) * NES_DEBUG_WINDOW_NAME_TABLE_WIDTH + (tile_x * 8 + pixel_x)) * 4 + 2] = cur_pixel_colour.b;
+                            name_table_1_pixel_buffer_[((tile_y * 8 + pixel_y) * NES_DEBUG_WINDOW_NAME_TABLE_WIDTH + (tile_x * 8 + pixel_x)) * 4 + 3] = 255; // Solid Alpha
+                        }
                     }
                 }
             }
         }
     }
 
+    name_table_0_texture_.update(name_table_0_pixel_buffer_.get());
+    name_table_1_texture_.update(name_table_1_pixel_buffer_.get());
+    window_.draw(name_table_0_sprite_);
+    window_.draw(name_table_1_sprite_);
     window_.display();
 }

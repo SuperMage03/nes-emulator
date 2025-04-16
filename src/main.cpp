@@ -9,7 +9,7 @@
 int main(int argc, char* argv[]) {
     NESWindowSFML nes_window;
     sf::RenderWindow& window = nes_window.getWindow();
-    window.setFramerateLimit(0);
+    window.setFramerateLimit(60);
     // Create a new NESDebugWindow
     NESDebugWindow nes_debug_window;
 

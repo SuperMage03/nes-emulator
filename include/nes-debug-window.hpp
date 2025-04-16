@@ -8,6 +8,8 @@
 // Project Defines
 #define NES_DEBUG_WINDOW_WIDTH 700
 #define NES_DEBUG_WINDOW_HEIGHT 800
+#define NES_DEBUG_WINDOW_NAME_TABLE_WIDTH 256
+#define NES_DEBUG_WINDOW_NAME_TABLE_HEIGHT 240
 #define NES_DEBUG_WINDOW_TITLE "NES Debug Window"
 
 class NESDebugWindow {
@@ -50,6 +52,14 @@ private:
      * @brief  The display window for debugging
     */
     sf::RenderWindow window_;
+
+    // Used for displaying the name tables
+    sf::Texture name_table_0_texture_;
+    sf::Texture name_table_1_texture_;
+    sf::Sprite name_table_0_sprite_;
+    sf::Sprite name_table_1_sprite_;
+    std::unique_ptr<uint8_t[]> name_table_0_pixel_buffer_;
+    std::unique_ptr<uint8_t[]> name_table_1_pixel_buffer_;
 };
 
 #endif
