@@ -9,6 +9,23 @@
 
 class RP2C02 {
 public:
+    // Thanks to the well known NES Emulator Dev Loopy for figuring out these registers
+    //   It makes implementing PPU timing much easier
+    union LoopyRegister {
+        struct {
+            uint16_t COARSE_X : 5;
+            uint16_t COARSE_Y : 5;
+            uint16_t NAMETABLE : 2;
+            uint16_t FINE_Y : 3;
+            uint16_t UNUSED : 1;
+        };
+        struct {
+            uint8_t LO;
+            uint8_t HI;
+        };
+        uint16_t raw_val;
+    };
+
     union ControlRegister {
         struct {
             uint8_t NAMETABLE : 2;
@@ -156,13 +173,6 @@ public:
     */
     Tile getTileFromPatternTable(const uint8_t& tile_index, const uint8_t& pattern_table_index, const uint8_t& palette_id) const;
 
-    /**
-    * @brief  Gets mirrored vram address
-    * @param  address: The address to be mirrored
-    * @return Mirrored address
-    */
-    uint16_t mirrorVRAMAddress(const uint16_t& address) const;
-
 private:
     // Colour Palette for display
     std::array<NESWindow::Colour, 0x40> colour_palette_;
@@ -182,16 +192,20 @@ private:
     uint8_t oam_address_;
     // 0x0004 (Internally) -> 0x2004 (CPU Address)
     uint8_t oam_data_;
-    // 0x0005 (Internally) -> 0x2005 (CPU Address)
-    ScrollRegister scroll_register_;
-    // 0x0006 (Internally) -> 0x2006 (CPU Address)
-    uint16_t address_register_;
-    // 0x0007 (Internally) -> 0x2007 (CPU Address)
+    // Current VRAM address
+    LoopyRegister loopy_v_register_;
+    // Temporary VRAM address; Can also be thought of as the address of the top left onscreen tile.
+    LoopyRegister loopy_t_register_;
+    // Scroll register for the x coordinate within the tile
+    uint8_t fine_x_scroll_;
+    // Write toggle flag for high byte and low byte
+    bool is_high_byte_selected_;
+
+    // Data buffer register for temporary storage
     uint8_t data_buffer_;
 
     // Internal Helper Variables
     bool read_from_data_buffer_;
-    bool is_high_byte_selected_;
     
     // PPU Emulator Variables
     bool nmi_requested_;

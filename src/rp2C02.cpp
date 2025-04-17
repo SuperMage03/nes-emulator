@@ -24,20 +24,18 @@ RP2C02::RP2C02():
         {204, 210, 120}, {180, 222, 120}, {168, 226, 144}, {152, 226, 180},
         {160, 214, 228}, {160, 162, 160}, {  0,   0,   0}, {  0,   0,   0},
     }),
+    palette_table_({0}), oam_({0}),
     control_register_({.raw_val=0x00}),
     mask_register_({.raw_val=0x00}),
     status_register_({.raw_val=0x00}),
     oam_address_(0), oam_data_(0),
-    scroll_register_({.ral_val=0x0000}), address_register_(0),
-    data_buffer_(0),
-    read_from_data_buffer_(false), is_high_byte_selected_(true),
+    loopy_v_register_({.raw_val=0x0000}),
+    loopy_t_register_({.raw_val=0x0000}),
+    fine_x_scroll_(0), is_high_byte_selected_(true),
+    data_buffer_(0), read_from_data_buffer_(false),
     nmi_requested_(false), cycles_elapsed_(0), 
     scanline_(0), cur_scanline_cycle_count_(0), 
     window_(nullptr), bus_(nullptr) {
-    // Initialize the palette table
-    palette_table_.fill(0);
-    // Initialize the OAM
-    oam_.fill(0);
 }
 
 void RP2C02::connectDisplayWindow(NESWindow* window) {
@@ -115,14 +113,14 @@ uint8_t RP2C02::readRegister(const uint8_t& address) {
             return_value = data_buffer_;
 
             // Read VRAM data from address
-            data_buffer_ = bus_->readBusData(address_register_);
+            data_buffer_ = bus_->readBusData(loopy_v_register_.raw_val);
 
             // If we can immediately return read data
             if (!read_from_data_buffer_) {
                 return_value = data_buffer_;
             }
             // Increment address register
-            address_register_ += control_register_.VRAM_ADDRESS_INCREMENT_MODE ? 0x20 : 0x01;
+            loopy_v_register_.raw_val += control_register_.VRAM_ADDRESS_INCREMENT_MODE ? 0x20 : 0x01;
             break;
         }
         default:
@@ -137,6 +135,7 @@ bool RP2C02::writeRegister(const uint8_t& address, const uint8_t& data) {
     switch (address & 0b00000111) {
         case 0x00:
             control_register_.raw_val = data;
+            loopy_t_register_.NAMETABLE = control_register_.NAMETABLE;
             write_success = true;
             break;
         case 0x01:
@@ -153,11 +152,13 @@ bool RP2C02::writeRegister(const uint8_t& address, const uint8_t& data) {
             break;
         case 0x05: {
             if (is_high_byte_selected_) {
-                scroll_register_.X = data;
+                fine_x_scroll_ = data & 0b00000111;
+                loopy_t_register_.COARSE_X = data >> 3;
                 is_high_byte_selected_ = false;
             }
             else {
-                scroll_register_.Y = data;
+                loopy_t_register_.FINE_Y = data & 0b00000111;
+                loopy_t_register_.COARSE_Y = data >> 3;
                 is_high_byte_selected_ = true;
             }
             write_success = true;
@@ -165,19 +166,21 @@ bool RP2C02::writeRegister(const uint8_t& address, const uint8_t& data) {
         }
         case 0x06: {
             if (is_high_byte_selected_) {
-                address_register_ = (static_cast<uint16_t>(data % 0x40) << 8) | (address_register_ & 0x00FF);
+                loopy_t_register_.HI = data;
                 is_high_byte_selected_ = false;
             }
             else {
-                address_register_ = (address_register_ & 0xFF00) | data;
+                loopy_t_register_.LO = data;
+                // Set the VRAM address to the temporary address
+                loopy_v_register_.raw_val = loopy_t_register_.raw_val;
                 is_high_byte_selected_ = true;
             }
             write_success = true;
             break;
         }
         case 0x07: {
-            write_success = bus_->writeBusData(address_register_, data);
-            address_register_ += control_register_.VRAM_ADDRESS_INCREMENT_MODE ? 0x20 : 0x01;
+            write_success = bus_->writeBusData(loopy_v_register_.raw_val, data);
+            loopy_v_register_.raw_val += control_register_.VRAM_ADDRESS_INCREMENT_MODE ? 0x20 : 0x01;
             break;
         }
         default:
@@ -227,12 +230,4 @@ RP2C02::Tile RP2C02::getTileFromPatternTable(const uint8_t& tile_index, const ui
         }
     }
     return out;
-}
-
-uint16_t RP2C02::mirrorVRAMAddress(const uint16_t& address) const {
-    // Mirroring the address
-    if (address >= 0x2000 && address <= 0x3EFF) {
-        return address - 0x2000;
-    }
-    return address;
 }

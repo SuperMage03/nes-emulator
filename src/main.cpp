@@ -39,6 +39,21 @@ int main(int argc, char* argv[]) {
                         break;
                 }
             }
+            else if (const auto* resized = event->getIf<sf::Event::Resized>()) {
+                const float screenWidth = 256;
+                const float screenHeight = 240;
+                sf::Vector2u new_size = window.getSize();
+                // setup my wanted aspect ratio
+                float  heightRatio = screenHeight / screenWidth;
+                float  widthRatio = screenWidth / screenHeight;
+                if (new_size.y * widthRatio <= new_size.x) {
+                    new_size.x = new_size.y * widthRatio;
+                }
+                else if (new_size.x * heightRatio <= new_size.y) {
+                    new_size.y = new_size.x * heightRatio;
+                }
+                window.setSize(sf::Vector2u(new_size.x, new_size.y));
+            }
         }
         nes.stepFrame();
         nes_debug_window.update();
