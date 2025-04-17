@@ -6,7 +6,7 @@
 #include "cartridge.hpp"
 #include "memory-unit.hpp"
 // Project Defines
-#define PPU_BUS_NAME_TABLE_SIZE 0x0800
+#define PPU_BUS_NAME_TABLE_SIZE sizeof(RP2C02::NameTable) * 2
 #define PPU_BUS_PALETTE_TABLE_SIZE 0x0020
 
 class PPUBUS : public BUS {

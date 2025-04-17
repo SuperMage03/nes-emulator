@@ -11,6 +11,10 @@ std::unique_ptr<Cartridge> Cartridge::makeCartridge(std::istream& rom_data_strea
 
     // Determine the mapper ID
     uint8_t mapper_id = (header.mapper2 & 0xF0) | (header.mapper1 >> 4);
+
+    // Determine the Mirror Mode
+    MirrorMode mirror_mode = (header.mapper1 & 0x01) ? MirrorMode::VERTICAL : MirrorMode::HORIZONTAL;
+
     // ROM file type
     uint8_t file_type = 1;
 
@@ -36,7 +40,7 @@ std::unique_ptr<Cartridge> Cartridge::makeCartridge(std::istream& rom_data_strea
         }
     }
 
-    std::unique_ptr<Cartridge> instance = std::unique_ptr<Cartridge>(new Cartridge(mapper_id, header.prg_rom_chunks * prg_rom_chunk_size, header.chr_rom_chunks * chr_rom_chunk_size));
+    std::unique_ptr<Cartridge> instance = std::unique_ptr<Cartridge>(new Cartridge(mapper_id, header.prg_rom_chunks * prg_rom_chunk_size, header.chr_rom_chunks * chr_rom_chunk_size, mirror_mode));
     // Read the program memory and stores it in the instance
     rom_data_stream.read(reinterpret_cast<char*>(instance->prg_rom_memory_.getPointer()), instance->prg_rom_memory_.getSize());
     // Read the pattern memory section and stores it in the instance
@@ -70,6 +74,11 @@ bool Cartridge::writeToChrMem(const uint16_t& address, const uint8_t& data) {
     return chr_memory_.write(mapper_->mapPPUWriteAddress(address), data);
 }
 
-Cartridge::Cartridge(const uint8_t& mapper_id, const uint32_t& prg_rom_size, const uint32_t& chr_rom_size): 
+Cartridge::MirrorMode Cartridge::getMirrorMode() const {
+    return mirror_mode_;
+}
+
+Cartridge::Cartridge(const uint8_t& mapper_id, const uint32_t& prg_rom_size, const uint32_t& chr_rom_size, const MirrorMode& mirror_mode): 
     prg_ram_memory_(MAPPER_PRG_RAM_REGION_SIZE), prg_rom_memory_(prg_rom_size), chr_memory_(chr_rom_size), 
-    mapper_(Mapper::makeMapper(mapper_id, MAPPER_PRG_RAM_REGION_SIZE, prg_rom_size, chr_rom_size)) {}
+    mapper_(Mapper::makeMapper(mapper_id, MAPPER_PRG_RAM_REGION_SIZE, prg_rom_size, chr_rom_size)),
+    mirror_mode_(mirror_mode) {}

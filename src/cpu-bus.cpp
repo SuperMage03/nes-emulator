@@ -15,12 +15,12 @@ uint8_t CPUBUS::readBusData(const uint16_t& address) const {
     // Check if the address is in the range of the PPU registers
     if ((0x2000 <= address) && (address <= 0x3FFF)) {
         // Emulate the mirroring of the PPU registers
-        return ppu_.readRegister(address & 0b00000111, false);
+        return ppu_.readRegister(address & 0b00000111);
     }
 
     if ((0x4000 <= address) && (address <= 0x401F)) {
         // Emulate the mirroring of the APU and I/O registers
-        return ppu_.readRegister(address & 0b00000111, true);
+        return 0;
     }
 
     if ((0x4020 <= address) && (address <= 0x5FFF)) {
@@ -46,11 +46,18 @@ bool CPUBUS::writeBusData(const uint16_t& address, const uint8_t& data) {
     // Check if the address is in the range of the PPU registers
     if ((0x2000 <= address) && (address <= 0x3FFF)) {
         // Emulate the mirroring of the PPU registers
-        return ppu_.writeRegister(address & 0b00000111, false, data);
+        return ppu_.writeRegister(address & 0b00000111, data);
     }
 
     if ((0x4000 <= address) && (address <= 0x401F)) {
-        return ppu_.writeRegister(address & 0b00000111, true, data);
+        // Emulate the mirroring of the APU and I/O registers
+        if (address == 0x4014) {
+            // OAM DMA
+            uint16_t oam_dma_address = static_cast<uint16_t>(data) << 8;
+            for (uint16_t i = 0; i < 0x100; i++) {
+                writeBusData(0x2004, readBusData(oam_dma_address + i));
+            }
+        }
     }
 
     if ((0x4020 <= address) && (address <= 0x5FFF)) {

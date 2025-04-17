@@ -23,10 +23,21 @@ RP2C02::RP2C02():
         {236, 174, 236}, {236, 174, 212}, {236, 180, 176}, {228, 196, 144},
         {204, 210, 120}, {180, 222, 120}, {168, 226, 144}, {152, 226, 180},
         {160, 214, 228}, {160, 162, 160}, {  0,   0,   0}, {  0,   0,   0},
-    }), 
+    }),
+    control_register_({.raw_val=0x00}),
+    mask_register_({.raw_val=0x00}),
+    status_register_({.raw_val=0x00}),
+    oam_address_(0), oam_data_(0),
+    scroll_register_({.ral_val=0x0000}), address_register_(0),
+    data_buffer_(0),
+    read_from_data_buffer_(false), is_high_byte_selected_(true),
     nmi_requested_(false), cycles_elapsed_(0), 
     scanline_(0), cur_scanline_cycle_count_(0), 
     window_(nullptr), bus_(nullptr) {
+    // Initialize the palette table
+    palette_table_.fill(0);
+    // Initialize the OAM
+    oam_.fill(0);
 }
 
 void RP2C02::connectDisplayWindow(NESWindow* window) {
@@ -80,81 +91,100 @@ bool RP2C02::writePaletteTable(const uint16_t& address, const uint8_t& data) {
     }
 }
 
-uint8_t RP2C02::readRegister(const uint8_t& address, const bool& chip_select_signal) {
+uint8_t RP2C02::readRegister(const uint8_t& address) {
+    uint8_t return_value = 0x00;
+
     switch (address & 0b00000111) {
+        case 0x00:
+            return_value = control_register_.raw_val;
+            break;
+        case 0x01:
+            return_value = mask_register_.raw_val;
+            break;
         case 0x02:
-            return status_register_.raw_val;
+            return_value = (status_register_.raw_val & 0xE0) | (data_buffer_ & 0x1F);
+            // Clear the vertical blanking flag
+            status_register_.VBLANK = 0;
+            // Reset byte select variable
+            is_high_byte_selected_ = true;
+            break;
         case 0x04:
-            if (chip_select_signal) {
-                return 0;
-            }
-            return oam_data_;
+            return_value = oam_.at(oam_address_);
+            break;
         case 0x07: {
+            return_value = data_buffer_;
+
             // Read VRAM data from address
-            uint8_t read_data = bus_->readBusData(address_register_.address);
-            // Increment address register
-            address_register_.address += control_register_.VRAM_ADDRESS_INCREMENT_MODE ? 0x20 : 0x01;
-        
-            uint8_t return_value = data_buffer_;
+            data_buffer_ = bus_->readBusData(address_register_);
+
             // If we can immediately return read data
             if (!read_from_data_buffer_) {
-                return_value = read_data;
+                return_value = data_buffer_;
             }
-            // Populate new cache
-            data_buffer_ = read_data;
-            return return_value;
+            // Increment address register
+            address_register_ += control_register_.VRAM_ADDRESS_INCREMENT_MODE ? 0x20 : 0x01;
+            break;
         }
         default:
-            return 0;
+            break;
     }
+    return return_value;
 }
 
-bool RP2C02::writeRegister(const uint8_t& address, const bool& chip_select_signal, const uint8_t& data) {
+bool RP2C02::writeRegister(const uint8_t& address, const uint8_t& data) {
+    bool write_success = false;
+
     switch (address & 0b00000111) {
         case 0x00:
             control_register_.raw_val = data;
-            return true;
+            write_success = true;
+            break;
         case 0x01:
             mask_register_.raw_val = data;
-            return true;
+            write_success = true;
+            break;
         case 0x03:
             oam_address_ = data;
-            return true;
+            write_success = true;
+            break;
         case 0x04:
-            if (!chip_select_signal) {
-                // OAM DATA
-                return false;
-            }
-            oam_dma_ = data;
-            return true;
+            oam_.at(oam_address_) = data;
+            write_success = true;
+            break;
         case 0x05: {
-            if (scroll_register_.is_x_byte_selected) {
+            if (is_high_byte_selected_) {
                 scroll_register_.X = data;
+                is_high_byte_selected_ = false;
             }
             else {
                 scroll_register_.Y = data;
+                is_high_byte_selected_ = true;
             }
-            scroll_register_.is_x_byte_selected = !scroll_register_.is_x_byte_selected;
-            return true;
+            write_success = true;
+            break;
         }
         case 0x06: {
-            if (address_register_.is_high_byte_selected) {
-                address_register_.HI = data;
+            if (is_high_byte_selected_) {
+                address_register_ = (static_cast<uint16_t>(data % 0x40) << 8) | (address_register_ & 0x00FF);
+                is_high_byte_selected_ = false;
             }
             else {
-                address_register_.LO = data;
+                address_register_ = (address_register_ & 0xFF00) | data;
+                is_high_byte_selected_ = true;
             }
-            address_register_.is_high_byte_selected = !address_register_.is_high_byte_selected;
-            return true;
+            write_success = true;
+            break;
         }
         case 0x07: {
-            bool write_success = bus_->writeBusData(address_register_.address, data);
-            address_register_.address += control_register_.VRAM_ADDRESS_INCREMENT_MODE ? 0x20 : 0x01;
-            return write_success;
+            write_success = bus_->writeBusData(address_register_, data);
+            address_register_ += control_register_.VRAM_ADDRESS_INCREMENT_MODE ? 0x20 : 0x01;
+            break;
         }
         default:
-            return false;
+            break;
     }
+
+    return write_success;
 }
 
 void RP2C02::setReadFromDataBuffer(const bool& value) {

@@ -9,17 +9,6 @@
 
 class RP2C02 {
 public:
-    struct AddressRegister {
-        union {
-            struct {
-                uint8_t LO;
-                uint8_t HI;
-            };
-            uint16_t address;
-        };
-        bool is_high_byte_selected;
-    };
-
     union ControlRegister {
         struct {
             uint8_t NAMETABLE : 2;
@@ -55,20 +44,20 @@ public:
         uint8_t raw_val;
     };
 
-    struct ScrollRegister {
-        union {
-            struct {
-                uint8_t Y;
-                uint8_t X;
-            };
-            uint16_t raw_val;
+    union ScrollRegister {
+        struct {
+            uint8_t Y;
+            uint8_t X;
         };
-        bool is_x_byte_selected;
+        uint16_t ral_val;
     };
 
-    struct NameTable {
-        std::array<uint8_t, 0x3C0> tile_data;
-        std::array<uint8_t, 0x40> palette_data;
+    union NameTable {
+        struct {
+            std::array<uint8_t, 0x03C0> tile_data;
+            std::array<uint8_t, 0x0040> palette_data;
+        };
+        std::array<uint8_t, 0x0400> raw_data;
     };
 
     struct Tile {
@@ -117,19 +106,17 @@ public:
     /**
     * @brief  Reads data from the PPU register at the address
     * @param  address: The address to read from
-    * @param  chip_select_signal: The chip select signal
     * @return Data read from the PPU
     */
-    uint8_t readRegister(const uint8_t& address, const bool& chip_select_signal);
+    uint8_t readRegister(const uint8_t& address);
     
     /**
     * @brief  Writes data to the PPU register at the address
     * @param  address: The address to write to
-    * @param  chip_select_signal: The chip select signal
     * @param  data: The data to write
     * @return True if successfully written, false otherwise
     */
-    bool writeRegister(const uint8_t& address, const bool& chip_select_signal, const uint8_t& data);
+    bool writeRegister(const uint8_t& address, const uint8_t& data);
 
     /**
     * @brief  Setter for read_from_data_buffer_
@@ -182,30 +169,29 @@ private:
     // Palette Table (Keeps the palette table used on screen)
     std::array<uint8_t, 0x20> palette_table_;
     // OAM (Keeps the state of the sprites)
-    std::array<uint8_t, 0x100> oam_;
+    std::array<uint8_t, 0x0100> oam_;
 
     // ------------ Internal PPU Registers ------------
     // 0x0000 (Internally) -> 0x2000 (CPU Address)
-    ControlRegister control_register_{.raw_val=0x0000};
+    ControlRegister control_register_;
     // 0x0001 (Internally) -> 0x2001 (CPU Address)
-    MaskRegister mask_register_{.raw_val=0x0000};
+    MaskRegister mask_register_;
     // 0x0002 (Internally) -> 0x2002 (CPU Address)
-    StatusRegister status_register_{.raw_val=0x0000};
+    StatusRegister status_register_;
     // 0x0003 (Internally) -> 0x2003 (CPU Address)
     uint8_t oam_address_;
     // 0x0004 (Internally) -> 0x2004 (CPU Address)
     uint8_t oam_data_;
     // 0x0005 (Internally) -> 0x2005 (CPU Address)
-    ScrollRegister scroll_register_{.raw_val=0x0000, .is_x_byte_selected=true};
+    ScrollRegister scroll_register_;
     // 0x0006 (Internally) -> 0x2006 (CPU Address)
-    AddressRegister address_register_{.address=0x0000, .is_high_byte_selected=true};
+    uint16_t address_register_;
     // 0x0007 (Internally) -> 0x2007 (CPU Address)
     uint8_t data_buffer_;
-    // 0x4014 (Internally) -> 0x4014 (CPU Address)
-    uint8_t oam_dma_;
 
     // Internal Helper Variables
     bool read_from_data_buffer_;
+    bool is_high_byte_selected_;
     
     // PPU Emulator Variables
     bool nmi_requested_;

@@ -10,6 +10,13 @@
 
 class Cartridge {
 public:
+    enum class MirrorMode {
+        HORIZONTAL       = 0,
+        VERTICAL         = 1,
+        SINGLE_SCREEN_LO = 2,
+        SINGLE_SCREEN_HI = 3,
+    };
+
     // iNES Header
     struct Header {
         char name[4];
@@ -60,15 +67,23 @@ public:
     */
     bool writeToChrMem(const uint16_t& address, const uint8_t& data);
 
+    /**
+    * @brief  Gets the mirror mode of the cartridge
+    * @param  None
+    * @return The mirror mode of the cartridge
+    */
+    MirrorMode getMirrorMode() const;
+
 protected:
     // Constructor
-    explicit Cartridge(const uint8_t& mapper_id, const uint32_t& prg_rom_size, const uint32_t& chr_rom_size);
+    explicit Cartridge(const uint8_t& mapper_id, const uint32_t& prg_rom_size, const uint32_t& chr_rom_size, const MirrorMode& mirror_mode);
 
 private:
     MemoryUnit prg_ram_memory_;
     MemoryUnit prg_rom_memory_;
     MemoryUnit chr_memory_;
     std::unique_ptr<Mapper> mapper_;
+    MirrorMode mirror_mode_;
 };
 
 #endif
