@@ -141,7 +141,7 @@ public:
     */
     bool writeMemory(const uint16_t& address, const uint8_t& data);
 
-private:
+protected:
     // Class for mos6502 address pointer using similar idea as an iterator
     //   It can point to a virtual address or a register
     class Pointer {

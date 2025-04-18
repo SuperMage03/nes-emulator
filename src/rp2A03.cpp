@@ -2,22 +2,11 @@
 
 RP2A03::RP2A03(): 
     clock_count_(0),
-    mos6502_(),
-    bus_(nullptr),
     dma_page_(0),
     dma_address_(0),
     dma_data_(0),
     dma_transfer_in_progress_(false),
     dma_is_synced_(false) {}
-
-void RP2A03::connectBUS(BUS* target_bus) {
-    bus_ = target_bus;
-    mos6502_.connectBUS(target_bus);
-}
-
-void RP2A03::reset() {
-    mos6502_.reset();
-}
 
 void RP2A03::runCycle() {
     clock_count_++;
@@ -47,19 +36,7 @@ void RP2A03::runCycle() {
         return;
     }
     
-    mos6502_.runCycle();
-}
-
-void RP2A03::nmi() {
-    mos6502_.nmi();
-}
-
-MOS6502::State RP2A03::getState() const {
-    return mos6502_.getState();
-}
-
-std::pair<std::string, uint8_t> RP2A03::disassembleInstruction(const uint16_t& address) const {
-    return mos6502_.disassembleInstruction(address);
+    MOS6502::runCycle();
 }
 
 void RP2A03::startDMATransfer(const uint8_t& page) {
