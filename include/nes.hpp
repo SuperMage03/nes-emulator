@@ -4,10 +4,11 @@
 #include "nes-window.hpp"
 #include "cartridge.hpp"
 #include "mos6502.hpp"
-#include "memory-unit.hpp"
-#include "ppu-bus.hpp"
-#include "rp2C02.hpp"
 #include "cpu-bus.hpp"
+#include "rp2C02.hpp"
+#include "ppu-bus.hpp"
+#include "controller.hpp"
+#include "memory-unit.hpp"
 
 class NES {
 public:
@@ -59,6 +60,13 @@ public:
     * @return None
     */
     void stepFrame();
+
+    /**
+    * @brief  Connects the controller to the NES system
+    * @param  controller: The controller to connect
+    * @return None
+    */
+    void connectController(Controller& controller);
 
 private:
     uint64_t clock_count_;

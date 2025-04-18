@@ -53,3 +53,7 @@ void NES::stepFrame() {
         clock();
     }
 }
+
+void NES::connectController(Controller& controller) {
+    cpu_bus_.connectController(&controller);
+}

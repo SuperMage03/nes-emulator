@@ -3,9 +3,10 @@
 // Project Headers
 #include "bus.hpp"
 #include "mos6502.hpp"
-#include "memory-unit.hpp"
 #include "rp2C02.hpp"
 #include "cartridge.hpp"
+#include "controller.hpp"
+#include "memory-unit.hpp"
 // Project Defines
 #define CPU_BUS_RAM_SIZE 0x0800
 #define CPU_BUS_PPU_SIZE 0x0008
@@ -37,11 +38,19 @@ public:
     */
     bool writeBusData(const uint16_t& address, const uint8_t& data) override;
 
+    /**
+    * @brief  Connects the controller to the bus
+    * @param  controller: The controller to connect
+    * @return True if successfully connected, false if two controllers are already connected
+    */
+    bool connectController(Controller* controller);
+
 private:
     MOS6502& cpu_;
     MemoryUnit& ram_;
     RP2C02& ppu_;
     const std::unique_ptr<Cartridge>& cartridge_;
+    std::array<Controller*, 2> controllers_;
 };
 
 #endif

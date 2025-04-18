@@ -4,11 +4,11 @@
 // Project Headers
 #include "nes-window-sfml.hpp"
 #include "nes.hpp"
+#include "controller.hpp"
 // Debugging Headers
 #ifdef DEBUG
 #include "nes-debug-window.hpp"
 #endif
-
 
 int main(int argc, char* argv[]) {
     NESWindowSFML nes_window;
@@ -17,7 +17,10 @@ int main(int argc, char* argv[]) {
 
     NES nes;
     nes.connectDisplayWindow(nes_window);
-    nes.loadCartridge("./tests/donkey_kong.nes");
+    nes.loadCartridge("./tests/nestest.nes");
+
+    Controller controller_one;
+    nes.connectController(controller_one);    
 
     #ifdef DEBUG
     NESDebugWindow nes_debug_window;
@@ -39,6 +42,60 @@ int main(int argc, char* argv[]) {
                         break;
                     case sf::Keyboard::Scancode::Space:
                         nes.stepFrame();
+                        break;
+                    case sf::Keyboard::Scancode::A:
+                        controller_one.pressButton(Controller::Button::A);
+                        break;
+                    case sf::Keyboard::Scancode::B:
+                        controller_one.pressButton(Controller::Button::B);
+                        break;
+                    case sf::Keyboard::Scancode::Up:
+                        controller_one.pressButton(Controller::Button::UP);
+                        break;
+                    case sf::Keyboard::Scancode::Down:
+                        controller_one.pressButton(Controller::Button::DOWN);
+                        break;
+                    case sf::Keyboard::Scancode::Left:
+                        controller_one.pressButton(Controller::Button::LEFT);
+                        break;
+                    case sf::Keyboard::Scancode::Right:
+                        controller_one.pressButton(Controller::Button::RIGHT);
+                        break;
+                    case sf::Keyboard::Scancode::Enter:
+                        controller_one.pressButton(Controller::Button::START);
+                        break;
+                    case sf::Keyboard::Scancode::Backspace:
+                        controller_one.pressButton(Controller::Button::SELECT);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            else if (const auto* key_released = event->getIf<sf::Event::KeyReleased>()) {
+                switch (key_released->scancode) {
+                    case sf::Keyboard::Scancode::A:
+                        controller_one.releaseButton(Controller::Button::A);
+                        break;
+                    case sf::Keyboard::Scancode::B:
+                        controller_one.releaseButton(Controller::Button::B);
+                        break;
+                    case sf::Keyboard::Scancode::Up:
+                        controller_one.releaseButton(Controller::Button::UP);
+                        break;
+                    case sf::Keyboard::Scancode::Down:
+                        controller_one.releaseButton(Controller::Button::DOWN);
+                        break;
+                    case sf::Keyboard::Scancode::Left:
+                        controller_one.releaseButton(Controller::Button::LEFT);
+                        break;
+                    case sf::Keyboard::Scancode::Right:
+                        controller_one.releaseButton(Controller::Button::RIGHT);
+                        break;
+                    case sf::Keyboard::Scancode::Enter:
+                        controller_one.releaseButton(Controller::Button::START);
+                        break;
+                    case sf::Keyboard::Scancode::Backspace:
+                        controller_one.releaseButton(Controller::Button::SELECT);
                         break;
                     default:
                         break;
