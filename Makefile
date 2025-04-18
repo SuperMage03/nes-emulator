@@ -15,6 +15,11 @@ SFMLLIB = -l sfml-system -l sfml-window -l sfml-graphics -l sfml-audio -l sfml-n
 
 .PHONY: clean
 
+release: $(TARGET)
+
+debug: CXXFLAGS += -DDEBUG
+debug: $(TARGET)
+
 $(TARGET) : $(OBJECTS)
 	$(CXX) $(CXXFLAGS) $(LIB) $(SFMLLIB) $(LINKEROPTIONS) $^ -o $(TARGET)
 
