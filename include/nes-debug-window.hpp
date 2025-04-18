@@ -6,7 +6,7 @@
 // Project Headers
 #include "nes.hpp"
 // Project Defines
-#define NES_DEBUG_WINDOW_WIDTH 700
+#define NES_DEBUG_WINDOW_WIDTH 550
 #define NES_DEBUG_WINDOW_HEIGHT 800
 #define NES_DEBUG_WINDOW_NAME_TABLE_WIDTH 256
 #define NES_DEBUG_WINDOW_NAME_TABLE_HEIGHT 240

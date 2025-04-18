@@ -404,15 +404,14 @@ NESWindow::Colour RP2C02::getColourFromPalette(const uint8_t& palette_id, const 
     return colour_palette_.at(bus_->readBusData(0x3F00 + ((palette_id << 2) | pixel_colour_value)) % colour_palette_.size());
 }
 
-RP2C02::Tile RP2C02::getTileFromPatternTable(const uint8_t& tile_index, const uint8_t& pattern_table_index, const uint8_t& palette_id) const {
-    Tile out;
-
+RP2C02::Tile RP2C02::getTileFromPatternTable(const uint8_t& tile_index, const uint8_t& palette_id, const uint8_t& pattern_table_index) const {
     const unsigned int total_bytes_per_tile = 16; // 8x8 pixels, 2 bits per pixel
-    const uint16_t flattened_tile_byte_index = tile_index * total_bytes_per_tile;
-
-    // Read pixel data from a tile
     const unsigned int tile_pixel_per_side = 8;
     const unsigned int chr_rom_pattern_table_byte_size = 0x1000;
+
+    const uint16_t flattened_tile_byte_index = tile_index * total_bytes_per_tile;
+
+    Tile out;
     for (uint8_t pixel_y = 0; pixel_y < tile_pixel_per_side; pixel_y++) {
         uint8_t cur_row_pixel_lsb = bus_->readBusData(pattern_table_index * chr_rom_pattern_table_byte_size + flattened_tile_byte_index + pixel_y + 0);
         uint8_t cur_row_pixel_msb = bus_->readBusData(pattern_table_index * chr_rom_pattern_table_byte_size + flattened_tile_byte_index + pixel_y + 8);
@@ -427,4 +426,8 @@ RP2C02::Tile RP2C02::getTileFromPatternTable(const uint8_t& tile_index, const ui
         }
     }
     return out;
+}
+
+const RP2C02::OAM& RP2C02::getOAM() const {
+    return oam_;
 }

@@ -224,11 +224,18 @@ public:
     /**
     * @brief  Gets the tile from the pattern table
     * @param  tile_index: The index of the tile
-    * @param  pattern_table_index: The index of the pattern table
     * @param  palette_id: The ID of the palette
+    * @param  pattern_table_index: The index of the pattern table
     * @return Tile from the pattern table
     */
-    Tile getTileFromPatternTable(const uint8_t& tile_index, const uint8_t& pattern_table_index, const uint8_t& palette_id) const;
+    Tile getTileFromPatternTable(const uint8_t& tile_index, const uint8_t& palette_id, const uint8_t& pattern_table_index) const;
+
+    /**
+    * @brief  Gets the current state of the OAM
+    * @param  None
+    * @return OAM object containing the current state of the OAM
+    */
+    const OAM& getOAM() const;
 
 private:
     // Colour Palette for display

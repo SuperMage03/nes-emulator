@@ -1,5 +1,6 @@
 #include "nes-debug-window.hpp"
 #include "rp2C02.hpp"
+#include <sstream>
 
 template< typename T >
 static std::string int_to_hex(T i) {
@@ -20,8 +21,8 @@ NESDebugWindow::NESDebugWindow():
     name_table_0_pixel_buffer_{std::make_unique<uint8_t[]>(NES_DEBUG_WINDOW_NAME_TABLE_WIDTH * NES_DEBUG_WINDOW_NAME_TABLE_HEIGHT * 4)},
     name_table_1_pixel_buffer_{std::make_unique<uint8_t[]>(NES_DEBUG_WINDOW_NAME_TABLE_WIDTH * NES_DEBUG_WINDOW_NAME_TABLE_HEIGHT * 4)} {
     window_.setFramerateLimit(60);
-    name_table_0_sprite_.setPosition({60, 520});
-    name_table_1_sprite_.setPosition({128 + NES_DEBUG_WINDOW_NAME_TABLE_WIDTH, 520});
+    name_table_0_sprite_.setPosition({13, NES_DEBUG_WINDOW_HEIGHT - NES_DEBUG_WINDOW_NAME_TABLE_HEIGHT - 10});
+    name_table_1_sprite_.setPosition({25 + NES_DEBUG_WINDOW_NAME_TABLE_WIDTH, NES_DEBUG_WINDOW_HEIGHT - NES_DEBUG_WINDOW_NAME_TABLE_HEIGHT - 10});
 }
 
 NESDebugWindow::~NESDebugWindow() {
@@ -82,6 +83,24 @@ void NESDebugWindow::update() {
         address_to_disassemble += instruction_size;
     }
 
+
+    // Draw the sprite data
+    const RP2C02::OAM& oam = nes_->ppu_.getOAM();
+
+    for (uint8_t sprite_index = 0; sprite_index < 20; sprite_index++) {
+        const RP2C02::Sprite& sprite = oam.sprite_data.at(sprite_index);
+
+        std::stringstream sprite_info;
+        sprite_info << int_to_hex(sprite_index) << ": ";
+        sprite_info << "(" << int_to_hex(sprite.x_position) << ", " << int_to_hex(sprite.y_position) << ") ";
+        sprite_info << "ID: " << int_to_hex(sprite.tile_id) << " ";
+        sprite_info << "Attr: " << int_to_hex(sprite.attribute);
+
+        text.setString(sprite_info.str());
+        text.setPosition({10, static_cast<float>(230 + (sprite_index * 15))});
+        window_.draw(text);
+    }
+
     RP2C02::NameTable* name_table = reinterpret_cast<RP2C02::NameTable*>(nes_->vram_.getPointer());
     for (uint8_t name_table_index = 0; name_table_index < 2; name_table_index++) {
         for (uint8_t tile_y = 0; tile_y < 30; tile_y++) {
@@ -107,11 +126,15 @@ void NESDebugWindow::update() {
                     palette_id = (palette_id & 0b11000000) >> 6;
                 }
 
-                uint8_t flattened_pattern_table_tile_index = name_table[name_table_index].tile_data.at(flattened_name_table_tile_index);
+                // Get the tile id from the name table
+                uint8_t pattern_table_tile_index = name_table[name_table_index].tile_data.at(flattened_name_table_tile_index);
+                
+                // Get the ppu control register
                 RP2C02::ControlRegister ppu_control_register;
                 ppu_control_register.raw_val = nes_->ppu_.readRegister(0x00);
-                RP2C02::Tile tile = nes_->ppu_.getTileFromPatternTable(flattened_pattern_table_tile_index, ppu_control_register.BACKGROUND_PATTERN_TABLE, palette_id);
                 
+                RP2C02::Tile tile = nes_->ppu_.getTileFromPatternTable(pattern_table_tile_index, palette_id, ppu_control_register.BACKGROUND_PATTERN_TABLE);
+
                 for (uint8_t pixel_y = 0; pixel_y < 8; pixel_y++) {
                     for (uint8_t pixel_x = 0; pixel_x < 8; pixel_x++) {
                         NESWindow::Colour& cur_pixel_colour = tile.pixel_colour.at(pixel_y * 8 + pixel_x);

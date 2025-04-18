@@ -33,20 +33,21 @@ void RP2A03::runCycle() {
             }
             else {
                 bus_->writeBusData(0x2004, dma_data_);
-                
+
                 // Check if the DMA transfer is done
                 if (dma_address_ == 0xFF) {
                     dma_transfer_in_progress_ = false;
+                    dma_is_synced_ = false;
                 }
                 else {
                     dma_address_++;
                 }
             }
         }
+        return;
     }
-    else {
-        mos6502_.runCycle();
-    }
+    
+    mos6502_.runCycle();
 }
 
 void RP2A03::nmi() {
