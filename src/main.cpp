@@ -11,13 +11,13 @@ int main(int argc, char* argv[]) {
     sf::RenderWindow& window = nes_window.getWindow();
     window.setFramerateLimit(60);
     // Create a new NESDebugWindow
-    NESDebugWindow nes_debug_window;
+    // NESDebugWindow nes_debug_window;
 
     NES nes;
     nes.connectDisplayWindow(nes_window);
     nes.loadCartridge("./tests/donkey_kong.nes");
 
-    nes_debug_window.attachNES(&nes);
+    // nes_debug_window.attachNES(&nes);
 
     // run the program as long as the window is open
     while (window.isOpen()) {
@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
             }
         }
         nes.stepFrame();
-        nes_debug_window.update();
+        // nes_debug_window.update();
         nes_window.render();
     }
     return 0;

@@ -15,7 +15,8 @@ public:
         struct {
             uint16_t COARSE_X : 5;
             uint16_t COARSE_Y : 5;
-            uint16_t NAMETABLE : 2;
+            uint16_t NAMETABLE_X : 1;
+            uint16_t NAMETABLE_Y : 1;
             uint16_t FINE_Y : 3;
             uint16_t UNUSED : 1;
         };
@@ -28,10 +29,11 @@ public:
 
     union ControlRegister {
         struct {
-            uint8_t NAMETABLE : 2;
+            uint8_t NAMETABLE_X : 1;
+            uint8_t NAMETABLE_Y : 1;
             uint8_t VRAM_ADDRESS_INCREMENT_MODE : 1;
             uint8_t SPRITE_PATTERN_ADDRESS : 1;
-            uint8_t BACKGROUND_PATTERN_ADDRESS : 1;
+            uint8_t BACKGROUND_PATTERN_TABLE : 1;
             uint8_t SPRITE_SIZE : 1;
             uint8_t MASTER_SLAVE_SELECT : 1;
             uint8_t GENERATE_NMI : 1;
@@ -59,14 +61,6 @@ public:
             uint8_t VBLANK : 1;
         };
         uint8_t raw_val;
-    };
-
-    union ScrollRegister {
-        struct {
-            uint8_t Y;
-            uint8_t X;
-        };
-        uint16_t ral_val;
     };
 
     union NameTable {
@@ -157,6 +151,57 @@ public:
     void setNMIFlag(const bool& value);
 
     /**
+    * @brief  Returns whether the PPU is rendering or not
+    * @param  None
+    * @return True if rendering, false otherwise
+    */
+    bool isRendering() const;
+
+    /**
+    * @brief  Increments the scroll X coordinate
+    * @param  None
+    * @return None
+    */
+    void increaseScrollX();
+
+    /**
+    * @brief  Increments the scroll Y coordinate
+    * @param  None
+    * @return None
+    */
+    void increaseScrollY();
+
+    /**
+    * @brief  Transfers Name Table X and Coarse X from LoopyT to LoopyV
+    * @param  None
+    * @return None
+    */
+    void transferLoopyX();
+
+    /**
+    * @brief  Transfers Name Table Y, Coarse Y and Fine Y from LoopyT to LoopyV
+    * @param  None
+    * @return None
+    */
+    void transferLoopyY();
+
+    /**
+    * @brief  Loads data to the background shifters' lower byte
+    * @param  tile_lsb: The LSB of the tile pattern
+    * @param  tile_msb: The MSB of the tile pattern
+    * @param  palette_id: The ID of the palette for the tile
+    * @return None
+    */
+    void loadBackgroundShifers(const uint8_t& tile_pattern_lsb, const uint8_t& tile_pattern_msb, const uint8_t& palette_id);
+
+    /**
+    * @brief  Shifts background shifters to the left
+    * @param  None
+    * @return None
+    */
+    void shiftBackgroundShifters();
+
+    /**
     * @brief  Gets the colour from the palette
     * @param  palette_id: The ID of the palette
     * @param  pixel_colour_value: The pixel colour value
@@ -212,9 +257,26 @@ private:
     uint64_t cycles_elapsed_;
 
     // Current Scanline
-    uint16_t scanline_;
-    // Current Scanline Cycle Count
-    uint16_t cur_scanline_cycle_count_;
+    int16_t scanline_;
+    // Current Scanline Cycle
+    int16_t scanline_cycle_;
+
+    // Next Tile ID of the background
+    uint8_t bg_next_tile_id_;
+    // Next Tile Attribute of the background
+    uint8_t bg_next_tile_palette_id_;
+    // Next Tile LSB of the background
+    uint8_t bg_next_tile_lsb_;
+    // Next Tile MSB of the background
+    uint8_t bg_next_tile_msb_;
+
+    // These are streams of data that are shifted out to the screen to produce the final image
+    //   When bits are stacked on top of another, it will give us the selected colour
+    //   Data are being pushed into these registers from the next background tile informations
+    uint16_t bg_shifter_pattern_lo_;
+    uint16_t bg_shifter_pattern_hi_;
+    uint16_t bg_shifter_palette_lo_;
+    uint16_t bg_shifter_palette_hi_;
 
     // PPU External Component Pointers
     NESWindow* window_;

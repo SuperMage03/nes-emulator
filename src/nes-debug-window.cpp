@@ -1,4 +1,5 @@
 #include "nes-debug-window.hpp"
+#include "rp2C02.hpp"
 
 template< typename T >
 static std::string int_to_hex(T i) {
@@ -89,7 +90,7 @@ void NESDebugWindow::update() {
                 uint16_t flattened_name_table_tile_index = tile_y * 32 + tile_x;
 
                 uint8_t attribute_block_index = (tile_y / 4) * 8 + (tile_x / 4);
-                uint8_t palette_id = name_table->palette_data.at(attribute_block_index);
+                uint8_t palette_id = name_table[name_table_index].palette_data.at(attribute_block_index);
 
                 uint8_t attribute_block_x = tile_x % 4;
                 uint8_t attribute_block_y = tile_y % 4;
@@ -107,8 +108,10 @@ void NESDebugWindow::update() {
                     palette_id = (palette_id & 0b11000000) >> 6;
                 }
 
-                uint8_t flattened_pattern_table_tile_index = name_table->tile_data.at(flattened_name_table_tile_index);
-                RP2C02::Tile tile = nes_->ppu_.getTileFromPatternTable(flattened_pattern_table_tile_index, name_table_index, palette_id);
+                uint8_t flattened_pattern_table_tile_index = name_table[name_table_index].tile_data.at(flattened_name_table_tile_index);
+                RP2C02::ControlRegister ppu_control_register;
+                ppu_control_register.raw_val = nes_->ppu_.readRegister(0x00);
+                RP2C02::Tile tile = nes_->ppu_.getTileFromPatternTable(flattened_pattern_table_tile_index, ppu_control_register.BACKGROUND_PATTERN_TABLE, palette_id);
                 
                 for (uint8_t pixel_y = 0; pixel_y < 8; pixel_y++) {
                     for (uint8_t pixel_x = 0; pixel_x < 8; pixel_x++) {

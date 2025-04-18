@@ -34,7 +34,7 @@ RP2C02::RP2C02():
     fine_x_scroll_(0), is_high_byte_selected_(true),
     data_buffer_(0), read_from_data_buffer_(false),
     nmi_requested_(false), cycles_elapsed_(0), 
-    scanline_(0), cur_scanline_cycle_count_(0), 
+    scanline_(0), scanline_cycle_(0), 
     window_(nullptr), bus_(nullptr) {
 }
 
@@ -50,28 +50,146 @@ void RP2C02::runCycle() {
     // Increment on total PPU cycles elapsed
     cycles_elapsed_++;
 
-    if (window_ != nullptr) {
-        window_->setPixel(cur_scanline_cycle_count_, scanline_, {(uint8_t)(rand() % 256), (uint8_t)(rand() % 256), (uint8_t)(rand() % 256)});
+    // Code block for fetching next background tile data
+    if ((-1 <= scanline_) && (scanline_ <= 239)) {
+        // These cycles, we are fetching next tile data
+        if (((2 <= scanline_cycle_) && (scanline_cycle_ <= 257)) ||
+            ((321 <= scanline_cycle_) && (scanline_cycle_ <= 337))) {
+            // Shift the background shifters
+            shiftBackgroundShifters();
+            
+            // We fetch new tile data every 8 cycles
+            switch ((scanline_cycle_ - 1) % 8) {
+                case 0:
+                loadBackgroundShifers(bg_next_tile_lsb_, bg_next_tile_msb_, bg_next_tile_palette_id_);
+                break;
+                // Fetch name table data
+                case 1:
+                bg_next_tile_id_ = bus_->readBusData(0x2000 | (loopy_v_register_.raw_val & 0x0FFF));
+                break;
+                // Fetch attribute table data
+                case 3: {
+                    // Here is where the loopy register shines, formula is on the NESDev Wiki
+                    uint16_t attribute_address = 0x23C0 | 
+                        (loopy_v_register_.NAMETABLE_Y << 11) | 
+                        (loopy_v_register_.NAMETABLE_X << 10) |
+                        ((loopy_v_register_.COARSE_Y >> 2) << 3) | 
+                        (loopy_v_register_.COARSE_X >> 2);
+                    
+
+                    bg_next_tile_palette_id_ = bus_->readBusData(attribute_address);
+
+                    // We extract the palette ID from the quadrant where the tile is located
+                    uint8_t attribute_block_x = loopy_v_register_.COARSE_X % 4;
+                    uint8_t attribute_block_y = loopy_v_register_.COARSE_Y % 4;
+                    if ((attribute_block_x <= 1) && (attribute_block_y <= 1)) {
+                        // Quad 0 of the attribute block
+                        bg_next_tile_palette_id_ = (bg_next_tile_palette_id_ & 0b00000011);
+                    }
+                    else if ((attribute_block_x > 1) && (attribute_block_y <= 1)) {
+                        // Quad 1 of the attribute block
+                        bg_next_tile_palette_id_ = (bg_next_tile_palette_id_ & 0b00001100) >> 2;
+                    }
+                    else if ((attribute_block_x <= 1) && (attribute_block_y > 1)) {
+                        // Quad 2 of the attribute block
+                        bg_next_tile_palette_id_ = (bg_next_tile_palette_id_ & 0b00110000) >> 4;
+                    }
+                    else {
+                        // Quad 3 of the attribute block
+                        bg_next_tile_palette_id_ = (bg_next_tile_palette_id_ & 0b11000000) >> 6;
+                    }
+                }
+                break;
+                // Fetch LSB of tile data from pattern table
+                case 5:
+                bg_next_tile_lsb_ = bus_->readBusData(control_register_.BACKGROUND_PATTERN_TABLE * 0x1000 + bg_next_tile_id_ * 0x10 + loopy_v_register_.FINE_Y + 0);
+                break;
+                // Fetch MSB of tile data from pattern table and increment scroll X
+                case 7:
+                // Fetch MSB of tile data from pattern table
+                bg_next_tile_msb_ = bus_->readBusData(control_register_.BACKGROUND_PATTERN_TABLE * 0x1000 + bg_next_tile_id_ * 0x10 + loopy_v_register_.FINE_Y + 8);
+                // Increment the scroll X register
+                increaseScrollX();
+                break;
+            }
+            
+        }
     }
+    // --------------------- Scanline Specific Code ----------------------------
 
-    cur_scanline_cycle_count_++;
-    if (cur_scanline_cycle_count_ >= 341) {
-        cur_scanline_cycle_count_ = 0;
-        scanline_++;
-
-        if (scanline_ == 241) {
-            // Ending the frame, we are in VBLANK
+    // Pre-render scanline
+    if (scanline_ == -1) {
+        // Clear VBLANK flag at cycle 1
+        if (scanline_cycle_ == 1) {
+            status_register_.VBLANK = 0;
+        }
+        else if ((280 <= scanline_cycle_) && (scanline_cycle_ <= 304)) {
+            transferLoopyY();
+        }
+    }
+    // Visible scanlines
+    else if ((0 <= scanline_) && (scanline_ <= 239)) {
+        // End of the displayable scanline cycle, move scroll Y down
+        if (scanline_cycle_ == 256) {
+            increaseScrollY();
+        }
+        // Transfers the horizontal scroll registers
+        if (scanline_cycle_ == 257) {
+            transferLoopyX();
+        }
+        // Weird unnecessary tile read at the end of the scanline
+        if ((scanline_cycle_ == 338) || (scanline_cycle_ == 340)) {
+            bg_next_tile_id_ = bus_->readBusData(0x2000 | (loopy_v_register_.raw_val & 0x0FFF));
+        }
+    }
+    // Post-render scanline, do nothing
+    else if (scanline_ == 240) {}
+    // Scanline 241 (The scanline right after the post-render scanline)
+    else if (scanline_ == 241) {
+        if (scanline_cycle_ == 1) {
             status_register_.VBLANK = 1;
             if (control_register_.GENERATE_NMI) {
-                // Trigger NMI
                 nmi_requested_ = true;
             }
         }
+    }
+    // Reset of the VBLANK scanlines
+    else if ((242 <= scanline_) && (scanline_ <= 260))  {}
+    // Should never reach here
+    else {
+        throw std::out_of_range("Scanline out of range");
+    }
 
-        if (scanline_ >= 262) {
-            scanline_ = 0;
-            // Resetting the VBLANK and start a new frame
-            status_register_.VBLANK = 0;
+    uint8_t bg_pixel_colour_value = 0x00;
+    uint8_t bg_palette_id = 0x00;
+
+    if (window_ != nullptr) {
+        if (mask_register_.BACKGROUND_ENABLE) {
+            uint16_t scroll_x_mask = 0x8000 >> fine_x_scroll_;
+
+            // Gets the pixel colour value from the background shifters
+            bg_pixel_colour_value |= (bg_shifter_pattern_hi_ & scroll_x_mask) > 0;
+            bg_pixel_colour_value <<= 1;
+            bg_pixel_colour_value |= (bg_shifter_pattern_lo_ & scroll_x_mask) > 0;
+            
+            // Gets the palette ID from the background shifters
+            bg_palette_id |= (bg_shifter_palette_hi_ & scroll_x_mask) > 0;
+            bg_palette_id <<= 1;
+            bg_palette_id |= (bg_shifter_palette_lo_ & scroll_x_mask) > 0;
+        
+            window_->setPixel(scanline_cycle_ - 1, scanline_, getColourFromPalette(bg_palette_id, bg_pixel_colour_value));
+        }
+    }
+
+    scanline_cycle_++;
+    if (scanline_cycle_ >= 341) {
+        scanline_cycle_ = 0;
+        if (scanline_ == 260) {
+            // Increment the scanline to pre-render scanline
+            scanline_ = -1;
+        }
+        else {
+            scanline_++;
         }
     }
 }
@@ -135,7 +253,8 @@ bool RP2C02::writeRegister(const uint8_t& address, const uint8_t& data) {
     switch (address & 0b00000111) {
         case 0x00:
             control_register_.raw_val = data;
-            loopy_t_register_.NAMETABLE = control_register_.NAMETABLE;
+            loopy_t_register_.NAMETABLE_X = control_register_.NAMETABLE_X;
+            loopy_t_register_.NAMETABLE_Y = control_register_.NAMETABLE_Y;
             write_success = true;
             break;
         case 0x01:
@@ -202,8 +321,85 @@ void RP2C02::setNMIFlag(const bool& value) {
     nmi_requested_ = value;
 }
 
-NESWindow::Colour RP2C02::getColourFromPalette(const uint8_t& palette_id, const uint8_t& pixel_colour_value) const {
+bool RP2C02::isRendering() const {
+    return (mask_register_.BACKGROUND_ENABLE || mask_register_.SPRITE_ENABLE);
+}
 
+void RP2C02::increaseScrollX() {
+    if (!isRendering()) return;
+
+    if (loopy_v_register_.COARSE_X == 31) {
+        loopy_v_register_.COARSE_X = 0;
+        loopy_v_register_.NAMETABLE_X = ~loopy_v_register_.NAMETABLE_X;
+    }
+    else {
+        loopy_v_register_.COARSE_X++;
+    }
+}
+
+void RP2C02::increaseScrollY() {
+    if (!isRendering()) return;
+
+    // Increment the fine Y coordinate (1 pixel down within the tile)
+    if (loopy_v_register_.FINE_Y < 7) {
+        loopy_v_register_.FINE_Y++;
+    }
+    else {
+        loopy_v_register_.FINE_Y = 0;
+        // Increment the coarse Y coordinate (1 tile down within the name table)
+        if (loopy_v_register_.COARSE_Y == 29) {
+            loopy_v_register_.COARSE_Y = 0;
+            loopy_v_register_.NAMETABLE_Y = ~loopy_v_register_.NAMETABLE_Y;
+        }
+        // If we are ever in the last row of the name table (which we shouldn't since 30 is the last row of the displayable name table),
+        //   just wrap around to the first row
+        else if (loopy_v_register_.COARSE_Y == 31) {
+            loopy_v_register_.COARSE_Y = 0;
+        }
+        else {
+            loopy_v_register_.COARSE_Y++;
+        }
+    }
+}
+
+void RP2C02::transferLoopyX() {
+    if (!isRendering()) return;
+    loopy_v_register_.NAMETABLE_X = loopy_t_register_.NAMETABLE_X;
+    loopy_v_register_.COARSE_X = loopy_t_register_.COARSE_X;
+}
+
+void RP2C02::transferLoopyY() {
+    if (!isRendering()) return;
+    loopy_v_register_.NAMETABLE_Y = loopy_t_register_.NAMETABLE_Y;
+    loopy_v_register_.COARSE_Y = loopy_t_register_.COARSE_Y;
+    loopy_v_register_.FINE_Y = loopy_t_register_.FINE_Y;
+}
+
+void RP2C02::loadBackgroundShifers(const uint8_t& tile_pattern_lsb, const uint8_t& tile_pattern_msb, const uint8_t& palette_id) {
+    // Clear all lower bytes of the shifters
+    bg_shifter_pattern_lo_ &= 0xFF00;
+    bg_shifter_pattern_hi_ &= 0xFF00;
+    bg_shifter_palette_lo_ &= 0xFF00;
+    bg_shifter_palette_hi_ &= 0xFF00;
+    // Push the new tile data into the shifters
+    bg_shifter_pattern_lo_ |= tile_pattern_lsb;
+    bg_shifter_pattern_hi_ |= tile_pattern_msb;
+    if (palette_id & 0b00000001) {
+        bg_shifter_palette_lo_ |= 0xFF;
+    }
+    if (palette_id & 0b00000010) {
+        bg_shifter_palette_hi_ |= 0xFF;
+    }
+}
+
+void RP2C02::shiftBackgroundShifters() {
+    bg_shifter_pattern_lo_ <<= 1;
+    bg_shifter_pattern_hi_ <<= 1;
+    bg_shifter_palette_lo_ <<= 1;
+    bg_shifter_palette_hi_ <<= 1;
+}
+
+NESWindow::Colour RP2C02::getColourFromPalette(const uint8_t& palette_id, const uint8_t& pixel_colour_value) const {
     return colour_palette_.at(bus_->readBusData(0x3F00 + ((palette_id << 2) | pixel_colour_value)) % colour_palette_.size());
 }
 
