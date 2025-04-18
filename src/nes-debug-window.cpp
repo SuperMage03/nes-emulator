@@ -34,7 +34,6 @@ void NESDebugWindow::attachNES(NES* nes) {
 
 void NESDebugWindow::update() {
     MOS6502::State cpu_state = nes_->cpu_.getState();
-    
 
     window_.clear(sf::Color::Blue);
     sf::Font font;

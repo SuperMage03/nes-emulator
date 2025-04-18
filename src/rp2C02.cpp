@@ -24,7 +24,7 @@ RP2C02::RP2C02():
         {204, 210, 120}, {180, 222, 120}, {168, 226, 144}, {152, 226, 180},
         {160, 214, 228}, {160, 162, 160}, {  0,   0,   0}, {  0,   0,   0},
     }),
-    palette_table_({0}), oam_({0}),
+    palette_table_({0}), oam_({.raw_data={0}}),
     control_register_({.raw_val=0x00}),
     mask_register_({.raw_val=0x00}),
     status_register_({.raw_val=0x00}),
@@ -171,7 +171,7 @@ void RP2C02::runCycle() {
             bg_pixel_colour_value |= (bg_shifter_pattern_hi_ & scroll_x_mask) > 0;
             bg_pixel_colour_value <<= 1;
             bg_pixel_colour_value |= (bg_shifter_pattern_lo_ & scroll_x_mask) > 0;
-            
+
             // Gets the palette ID from the background shifters
             bg_palette_id |= (bg_shifter_palette_hi_ & scroll_x_mask) > 0;
             bg_palette_id <<= 1;
@@ -225,7 +225,7 @@ uint8_t RP2C02::readRegister(const uint8_t& address) {
             is_high_byte_selected_ = true;
             break;
         case 0x04:
-            return_value = oam_.at(oam_address_);
+            return_value = oam_.raw_data.at(oam_address_);
             break;
         case 0x07: {
             return_value = data_buffer_;
@@ -266,7 +266,8 @@ bool RP2C02::writeRegister(const uint8_t& address, const uint8_t& data) {
             write_success = true;
             break;
         case 0x04:
-            oam_.at(oam_address_) = data;
+            oam_.raw_data.at(oam_address_) = data;
+            oam_address_++;
             write_success = true;
             break;
         case 0x05: {

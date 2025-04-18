@@ -75,6 +75,18 @@ public:
         std::array<NESWindow::Colour, 0x40> pixel_colour;
     };
 
+    struct Sprite {
+        uint8_t y_position;
+        uint8_t tile_id;
+        uint8_t attribute; // How sprite should be rendered
+        uint8_t x_position;
+    };
+
+    union OAM {
+        std::array<Sprite, 0x40> sprite_data;
+        std::array<uint8_t, 0x100> raw_data;
+    };
+
     // Constructor
     RP2C02();
 
@@ -224,7 +236,7 @@ private:
     // Palette Table (Keeps the palette table used on screen)
     std::array<uint8_t, 0x20> palette_table_;
     // OAM (Keeps the state of the sprites)
-    std::array<uint8_t, 0x0100> oam_;
+    OAM oam_;
 
     // ------------ Internal PPU Registers ------------
     // 0x0000 (Internally) -> 0x2000 (CPU Address)

@@ -1,6 +1,6 @@
 #include "cpu-bus.hpp"
 
-CPUBUS::CPUBUS(MOS6502& cpu, MemoryUnit& ram, RP2C02& ppu, const std::unique_ptr<Cartridge>& cartridge): 
+CPUBUS::CPUBUS(RP2A03& cpu, MemoryUnit& ram, RP2C02& ppu, const std::unique_ptr<Cartridge>& cartridge): 
     cpu_(cpu), ram_(ram), ppu_(ppu), cartridge_(cartridge), controllers_({nullptr, nullptr}) {
     cpu_.connectBUS(this);
 }
@@ -57,16 +57,11 @@ bool CPUBUS::writeBusData(const uint16_t& address, const uint8_t& data) {
         // Emulate the mirroring of the PPU registers
         return ppu_.writeRegister(address & 0b00000111, data);
     }
-
-    if ((0x4000 <= address) && (address <= 0x401F)) {
-        // Emulate the mirroring of the APU and I/O registers
-        if (address == 0x4014) {
-            // OAM DMA
-            uint16_t oam_dma_address = static_cast<uint16_t>(data) << 8;
-            for (uint16_t i = 0; i < 0x100; i++) {
-                writeBusData(0x2004, readBusData(oam_dma_address + i));
-            }
-        }
+    
+    // OAM DMA
+    if (address == 0x4014) {
+        cpu_.startDMATransfer(data);
+        return true;
     }
 
     // Request the controller to load the shift register
@@ -77,6 +72,10 @@ bool CPUBUS::writeBusData(const uint16_t& address, const uint8_t& data) {
             return true;
         }
         return false;
+    }
+
+    if ((0x4000 <= address) && (address <= 0x401F)) {
+        // Emulate the mirroring of the APU and I/O registers
     }
 
     if ((0x4020 <= address) && (address <= 0x5FFF)) {

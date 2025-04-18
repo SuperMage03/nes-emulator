@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
 
     NES nes;
     nes.connectDisplayWindow(nes_window);
-    nes.loadCartridge("./tests/nestest.nes");
+    nes.loadCartridge("./tests/donkey_kong.nes");
 
     Controller controller_one;
     nes.connectController(controller_one);    

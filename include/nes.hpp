@@ -3,7 +3,7 @@
 // Project Headers
 #include "nes-window.hpp"
 #include "cartridge.hpp"
-#include "mos6502.hpp"
+#include "rp2A03.hpp"
 #include "cpu-bus.hpp"
 #include "rp2C02.hpp"
 #include "ppu-bus.hpp"
@@ -70,7 +70,7 @@ public:
 
 private:
     uint64_t clock_count_;
-    MOS6502 cpu_;
+    RP2A03 cpu_;
     MemoryUnit ram_;
     RP2C02 ppu_;
     MemoryUnit vram_;

@@ -2,7 +2,7 @@
 #define _CPU_BUS_HPP_
 // Project Headers
 #include "bus.hpp"
-#include "mos6502.hpp"
+#include "rp2A03.hpp"
 #include "rp2C02.hpp"
 #include "cartridge.hpp"
 #include "controller.hpp"
@@ -21,7 +21,7 @@ public:
     * @param  cartridge: Cartridge on the BUS
     * @return None
     */
-    CPUBUS(MOS6502& cpu, MemoryUnit& ram, RP2C02& ppu, const std::unique_ptr<Cartridge>& cartridge);
+    CPUBUS(RP2A03& cpu, MemoryUnit& ram, RP2C02& ppu, const std::unique_ptr<Cartridge>& cartridge);
 
     /**
     * @brief  Reads data from the bus at the address
@@ -46,7 +46,7 @@ public:
     bool connectController(Controller* controller);
 
 private:
-    MOS6502& cpu_;
+    RP2A03& cpu_;
     MemoryUnit& ram_;
     RP2C02& ppu_;
     const std::unique_ptr<Cartridge>& cartridge_;
