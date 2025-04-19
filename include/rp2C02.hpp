@@ -2,6 +2,7 @@
 #define _RP2CO2_HPP_
 // Standard Library Headers
 #include <array>
+#include <vector>
 #include <cstdint>
 // Project Headers
 #include "nes-window.hpp"
@@ -32,7 +33,7 @@ public:
             uint8_t NAMETABLE_X : 1;
             uint8_t NAMETABLE_Y : 1;
             uint8_t VRAM_ADDRESS_INCREMENT_MODE : 1;
-            uint8_t SPRITE_PATTERN_ADDRESS : 1;
+            uint8_t SPRITE_PATTERN_TABLE : 1;
             uint8_t BACKGROUND_PATTERN_TABLE : 1;
             uint8_t SPRITE_SIZE : 1;
             uint8_t MASTER_SLAVE_SELECT : 1;
@@ -80,6 +81,8 @@ public:
         uint8_t tile_id;
         uint8_t attribute; // How sprite should be rendered
         uint8_t x_position;
+        bool isFlippedHorizontally() const;
+        bool isFlippedVertically() const;
     };
 
     union OAM {
@@ -214,6 +217,22 @@ public:
     void shiftBackgroundShifters();
 
     /**
+    * @brief  Loads data to the sprite shifters' lower byte
+    * @param  tile_lsb: The LSB of the tile pattern
+    * @param  tile_msb: The MSB of the tile pattern
+    * @param  sprite_index: The index of the sprite
+    * @return None
+    */
+    void loadSpriteShifters(const uint8_t& tile_pattern_lsb, const uint8_t& tile_pattern_msb, const uint8_t& sprite_index);
+
+    /**
+    * @brief  Shifts sprite shifters to the left
+    * @param  sprite_index: The index of the sprite
+    * @return None
+    */
+    void shiftSpriteShifters(const uint8_t& sprite_index);
+
+    /**
     * @brief  Gets the colour from the palette
     * @param  palette_id: The ID of the palette
     * @param  pixel_colour_value: The pixel colour value
@@ -236,6 +255,13 @@ public:
     * @return OAM object containing the current state of the OAM
     */
     const OAM& getOAM() const;
+
+    /**
+    * @brief  Searches for sprites at a specific scanline
+    * @param  scanline: The scanline to search for
+    * @return A vector of sprites that are at the specified scanline
+    */
+    std::vector<Sprite> searchSpritesAtScanline(const int16_t& scanline) const;
 
 private:
     // Colour Palette for display
@@ -296,6 +322,10 @@ private:
     uint16_t bg_shifter_pattern_hi_;
     uint16_t bg_shifter_palette_lo_;
     uint16_t bg_shifter_palette_hi_;
+
+    std::vector<Sprite> sprites_at_next_scanline_;
+    std::array<uint8_t, 8> sprite_shifter_pattern_lo_;
+    std::array<uint8_t, 8> sprite_shifter_pattern_hi_;
 
     // PPU External Component Pointers
     NESWindow* window_;

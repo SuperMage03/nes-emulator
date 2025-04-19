@@ -1,6 +1,24 @@
 #include "rp2C02.hpp"
 #include <stdexcept>
 
+static uint8_t flipByte(uint8_t byte) {
+    uint8_t result = 0x00;
+    for (uint8_t i = 0; i < 8; i++) {
+        result <<= 1;
+        result |= (byte & 0x01);
+        byte >>= 1;
+    }
+    return result;
+}
+
+bool RP2C02::Sprite::isFlippedHorizontally() const {
+    return attribute & 0x40;
+}
+
+bool RP2C02::Sprite::isFlippedVertically() const {
+    return attribute & 0x80;
+}
+
 RP2C02::RP2C02(): 
     colour_palette_({
         // Thanks to OLC
@@ -50,13 +68,43 @@ void RP2C02::runCycle() {
     // Increment on total PPU cycles elapsed
     cycles_elapsed_++;
 
-    // Code block for fetching next background tile data
+    // Skip scanline cycle 0 for scanline 0
+    if ((scanline_ == 0) && (scanline_cycle_ == 0)) {
+        scanline_cycle_ = 1;
+        return;
+    }
+
+    // --------------- VBlank Related Events -----------------
+    // Pre-rendering scanline
+    if (scanline_ == -1) {
+        // Clear VBLANK flag at cycle 1
+        if (scanline_cycle_ == 1) {
+            status_register_.VBLANK = 0;
+            status_register_.SPRITE_OVERFLOW = 0;
+            // Clear the sprite shifters
+            sprite_shifter_pattern_lo_.fill(0x00);
+            sprite_shifter_pattern_hi_.fill(0x00);
+        }
+    }
+    // Scanline 241 (The scanline right after the post-render scanline)
+    else if (scanline_ == 241) {
+        if (scanline_cycle_ == 1) {
+            status_register_.VBLANK = 1;
+            if (control_register_.GENERATE_NMI) {
+                nmi_requested_ = true;
+            }
+        }
+    }
+
+    // Fetching next background tile data
     if ((-1 <= scanline_) && (scanline_ <= 239)) {
         // These cycles, we are fetching next tile data
         if (((2 <= scanline_cycle_) && (scanline_cycle_ <= 257)) ||
             ((321 <= scanline_cycle_) && (scanline_cycle_ <= 337))) {
-            // Shift the background shifters
-            shiftBackgroundShifters();
+            if (mask_register_.BACKGROUND_ENABLE) {
+                // Shift the background shifters
+                shiftBackgroundShifters();
+            }
             
             // We fetch new tile data every 8 cycles
             switch ((scanline_cycle_ - 1) % 8) {
@@ -76,7 +124,6 @@ void RP2C02::runCycle() {
                         ((loopy_v_register_.COARSE_Y >> 2) << 3) | 
                         (loopy_v_register_.COARSE_X >> 2);
                     
-
                     bg_next_tile_palette_id_ = bus_->readBusData(attribute_address);
 
                     // We extract the palette ID from the quadrant where the tile is located
@@ -112,75 +159,164 @@ void RP2C02::runCycle() {
                 increaseScrollX();
                 break;
             }
-            
         }
-    }
-    // --------------------- Scanline Specific Code ----------------------------
 
-    // Pre-render scanline
-    if (scanline_ == -1) {
-        // Clear VBLANK flag at cycle 1
-        if (scanline_cycle_ == 1) {
-            status_register_.VBLANK = 0;
-        }
-        else if ((280 <= scanline_cycle_) && (scanline_cycle_ <= 304)) {
-            transferLoopyY();
-        }
-    }
-    // Visible scanlines
-    else if ((0 <= scanline_) && (scanline_ <= 239)) {
         // End of the displayable scanline cycle, move scroll Y down
         if (scanline_cycle_ == 256) {
             increaseScrollY();
         }
+
         // Transfers the horizontal scroll registers
         if (scanline_cycle_ == 257) {
+            // Don't think this is needed
+            // loadBackgroundShifers(bg_next_tile_lsb_, bg_next_tile_msb_, bg_next_tile_palette_id_);
             transferLoopyX();
         }
+
         // Weird unnecessary tile read at the end of the scanline
         if ((scanline_cycle_ == 338) || (scanline_cycle_ == 340)) {
             bg_next_tile_id_ = bus_->readBusData(0x2000 | (loopy_v_register_.raw_val & 0x0FFF));
         }
-    }
-    // Post-render scanline, do nothing
-    else if (scanline_ == 240) {}
-    // Scanline 241 (The scanline right after the post-render scanline)
-    else if (scanline_ == 241) {
-        if (scanline_cycle_ == 1) {
-            status_register_.VBLANK = 1;
-            if (control_register_.GENERATE_NMI) {
-                nmi_requested_ = true;
+
+        // Pre-render scanline
+        if (scanline_ == -1) {
+            if ((280 <= scanline_cycle_) && (scanline_cycle_ <= 304)) {
+                transferLoopyY();
             }
         }
-    }
-    // Reset of the VBLANK scanlines
-    else if ((242 <= scanline_) && (scanline_ <= 260))  {}
-    // Should never reach here
-    else {
-        throw std::out_of_range("Scanline out of range");
     }
 
     uint8_t bg_pixel_colour_value = 0x00;
     uint8_t bg_palette_id = 0x00;
 
-    if (window_ != nullptr) {
-        if (mask_register_.BACKGROUND_ENABLE) {
-            uint16_t scroll_x_mask = 0x8000 >> fine_x_scroll_;
+    if (mask_register_.BACKGROUND_ENABLE) {
+        uint16_t scroll_x_mask = 0x8000 >> fine_x_scroll_;
 
-            // Gets the pixel colour value from the background shifters
-            bg_pixel_colour_value |= (bg_shifter_pattern_hi_ & scroll_x_mask) > 0;
-            bg_pixel_colour_value <<= 1;
-            bg_pixel_colour_value |= (bg_shifter_pattern_lo_ & scroll_x_mask) > 0;
+        // Gets the pixel colour value from the background shifters
+        bg_pixel_colour_value |= (bg_shifter_pattern_hi_ & scroll_x_mask) > 0;
+        bg_pixel_colour_value <<= 1;
+        bg_pixel_colour_value |= (bg_shifter_pattern_lo_ & scroll_x_mask) > 0;
 
-            // Gets the palette ID from the background shifters
-            bg_palette_id |= (bg_shifter_palette_hi_ & scroll_x_mask) > 0;
-            bg_palette_id <<= 1;
-            bg_palette_id |= (bg_shifter_palette_lo_ & scroll_x_mask) > 0;
-        
-            window_->setPixel(scanline_cycle_ - 1, scanline_, getColourFromPalette(bg_palette_id, bg_pixel_colour_value));
+        // Gets the palette ID from the background shifters
+        bg_palette_id |= (bg_shifter_palette_hi_ & scroll_x_mask) > 0;
+        bg_palette_id <<= 1;
+        bg_palette_id |= (bg_shifter_palette_lo_ & scroll_x_mask) > 0;
+    }
+
+    // --------------- Code block for rendering the sprites --------------------
+
+    if ((0 <= scanline_) && (scanline_ <= 239)) {
+        // Find the sprites at the next scanline
+        if (scanline_cycle_ == 257) {
+            sprites_at_next_scanline_ = std::move(searchSpritesAtScanline(scanline_));
+            // If there are more than 8 sprites on the next scanline, set the overflow flag
+            status_register_.SPRITE_OVERFLOW = (sprites_at_next_scanline_.size() > 8);
+        }
+
+        // Load the sprites at the next scanline into the sprite shifters
+        if (scanline_cycle_ == 340) {
+            for (uint8_t sprite_index = 0; sprite_index < std::min(sprites_at_next_scanline_.size(), static_cast<size_t>(8)); sprite_index++) {
+                const auto& sprite = sprites_at_next_scanline_.at(sprite_index);
+
+                // The y coordinate within the sprite to be rendered
+                uint8_t sprite_pixel_y = scanline_ - sprite.y_position;
+
+                // In 8x16 sprite mode, the pattern table to use is the last bit of the tile ID
+                uint8_t sprite_pattern_table = control_register_.SPRITE_SIZE ? sprite.tile_id & 0x01 : control_register_.SPRITE_PATTERN_TABLE;
+                // In 8x16 sprite mode, the upper 7 bit of the tile ID is for the first half, and the other half of the sprite is the next tile
+                uint8_t sprite_tile_id = control_register_.SPRITE_SIZE ? (sprite.tile_id & 0xFE) + (sprite_pixel_y >= 8) : sprite.tile_id;
+
+                // The y coordinate within the tile to be rendered
+                uint8_t tile_pixel_y = sprite_pixel_y % 8;
+
+                // If the sprite is flipped vertically, we need to flip the tile pixel y coordinate
+                tile_pixel_y = sprite.isFlippedVertically() ? 7 - tile_pixel_y : tile_pixel_y;
+
+                // If the sprite is flipped vertically, and we are in 8x16 sprite mode, we need to render the other tile of the sprite
+                //   Simply done by toggling the last bit of the tile ID
+                if (sprite.isFlippedVertically() && control_register_.SPRITE_SIZE) {
+                    sprite_tile_id ^= 0x01;
+                }
+
+                // Read the tile data from the pattern table
+                uint8_t tile_pattern_lsb = bus_->readBusData(sprite_pattern_table * 0x1000 + sprite_tile_id * 0x10 + tile_pixel_y + 0);
+                uint8_t tile_pattern_msb = bus_->readBusData(sprite_pattern_table * 0x1000 + sprite_tile_id * 0x10 + tile_pixel_y + 8);
+
+                if (sprite.isFlippedHorizontally()) {
+                    tile_pattern_lsb = flipByte(tile_pattern_lsb);
+                    tile_pattern_msb = flipByte(tile_pattern_msb);
+                }
+
+                loadSpriteShifters(tile_pattern_lsb, tile_pattern_msb, sprite_index);
+            }
         }
     }
 
+    uint8_t sprite_pixel_colour_value = 0x00;
+    uint8_t sprite_palette_id = 0x00;
+    uint8_t sprite_z_index = 0x00;
+
+    if (mask_register_.SPRITE_ENABLE) {
+        for (uint8_t sprite_index = 0; sprite_index < std::min(sprites_at_next_scanline_.size(), static_cast<size_t>(8)); sprite_index++) {
+            Sprite& sprite = sprites_at_next_scanline_.at(sprite_index);
+            // Scanline cycle is not at the position to draw the sprite yet
+            if (sprite.x_position > 0) {
+                continue;
+            }
+            
+            // Gets the pixel colour value from the sprite shifters
+            sprite_pixel_colour_value |= (sprite_shifter_pattern_hi_.at(sprite_index) & 0x80) > 0;
+            sprite_pixel_colour_value <<= 1;
+            sprite_pixel_colour_value |= (sprite_shifter_pattern_lo_.at(sprite_index) & 0x80) > 0;
+            
+            sprite_palette_id = (sprite.attribute & 0x03) + 0x04;
+            sprite_z_index = (sprite.attribute & 0x20) == 0;
+
+            // Check that this pixel is not transparent
+            if (sprite_pixel_colour_value != 0x00) break;
+        }
+
+        // Do sprite shifting
+        if ((0 <= scanline_) && (scanline_ <= 239) &&
+            (0 <= (scanline_cycle_ - 1) && ((scanline_cycle_ - 1) <= 255))) {
+            for (uint8_t sprite_index = 0; sprite_index < std::min(sprites_at_next_scanline_.size(), static_cast<size_t>(8)); sprite_index++) {
+                Sprite& sprite = sprites_at_next_scanline_.at(sprite_index);
+                // Waiting until the sprite x position lines up with scanline cycle
+                if (sprite.x_position > 0) {
+                    sprite.x_position--;
+                    continue;
+                }
+                shiftSpriteShifters(sprite_index);
+            }
+        }
+    }
+
+    uint8_t final_pixel_colour_value = 0x00;
+    uint8_t final_palette_id = 0x00;
+
+    // Both background and sprite are transparent
+    if ((bg_pixel_colour_value == 0x00) && (sprite_pixel_colour_value == 0x00)) {
+        final_pixel_colour_value = 0x00;
+        final_palette_id = 0x00;
+    }
+    else if ((bg_pixel_colour_value != 0x00) && (sprite_pixel_colour_value == 0x00)) {
+        final_pixel_colour_value = bg_pixel_colour_value;
+        final_palette_id = bg_palette_id;
+    }
+    else if ((bg_pixel_colour_value == 0x00) && (sprite_pixel_colour_value != 0x00)) {
+        final_pixel_colour_value = sprite_pixel_colour_value;
+        final_palette_id = sprite_palette_id;
+    }
+    else {
+        final_pixel_colour_value = sprite_z_index > 0 ? sprite_pixel_colour_value : bg_pixel_colour_value;
+        final_palette_id = sprite_z_index > 0 ? sprite_palette_id : bg_palette_id;
+    }
+
+    if (window_ != nullptr) {
+        window_->setPixel(scanline_cycle_ - 1, scanline_, getColourFromPalette(final_palette_id, final_pixel_colour_value));
+    }
+
+    // Scanline and Scanline Cycle Increment
     scanline_cycle_++;
     if (scanline_cycle_ >= 341) {
         scanline_cycle_ = 0;
@@ -400,6 +536,17 @@ void RP2C02::shiftBackgroundShifters() {
     bg_shifter_palette_hi_ <<= 1;
 }
 
+void RP2C02::loadSpriteShifters(const uint8_t& tile_pattern_lsb, const uint8_t& tile_pattern_msb, const uint8_t& sprite_index) {
+    // Push the new tile data into the shifters
+    sprite_shifter_pattern_lo_.at(sprite_index) = tile_pattern_lsb;
+    sprite_shifter_pattern_hi_.at(sprite_index) = tile_pattern_msb;
+}
+
+void RP2C02::shiftSpriteShifters(const uint8_t& sprite_index) {
+    sprite_shifter_pattern_lo_.at(sprite_index) <<= 1;
+    sprite_shifter_pattern_hi_.at(sprite_index) <<= 1;
+}
+
 NESWindow::Colour RP2C02::getColourFromPalette(const uint8_t& palette_id, const uint8_t& pixel_colour_value) const {
     return colour_palette_.at(bus_->readBusData(0x3F00 + ((palette_id << 2) | pixel_colour_value)) % colour_palette_.size());
 }
@@ -430,4 +577,14 @@ RP2C02::Tile RP2C02::getTileFromPatternTable(const uint8_t& tile_index, const ui
 
 const RP2C02::OAM& RP2C02::getOAM() const {
     return oam_;
+}
+
+std::vector<RP2C02::Sprite> RP2C02::searchSpritesAtScanline(const int16_t& scanline) const {
+    std::vector<Sprite> sprites_found;
+    for (const auto& sprite : oam_.sprite_data) {
+        if ((sprite.y_position <= scanline) && (scanline < (sprite.y_position + (control_register_.SPRITE_SIZE ? 16 : 8)))) {
+            sprites_found.push_back(sprite);
+        }
+    }
+    return sprites_found;
 }
