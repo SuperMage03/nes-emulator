@@ -168,9 +168,23 @@ public:
     /**
     * @brief  Returns whether the PPU is rendering or not
     * @param  None
-    * @return True if rendering, false otherwise
+    * @return True if rendering is enabled, false otherwise
     */
-    bool isRendering() const;
+    bool isRenderEnabled() const;
+
+    /**
+    * @brief  Returns whether the PPU is rendering left-most 8 pixels or not
+    * @param  None
+    * @return True if rendering is enabled for left-most 8 pixels, false otherwise
+    */
+    bool isRenderLeftMostPixelsEnabled() const;
+
+    /**
+    * @brief  Returns whether the PPU is rendering pixel at the current cycle
+    * @param  None
+    * @return True if rendering pixel in the current cycle, false otherwise
+    */
+    bool isRenderingPixel() const;
 
     /**
     * @brief  Increments the scroll X coordinate
@@ -257,11 +271,11 @@ public:
     const OAM& getOAM() const;
 
     /**
-    * @brief  Searches for sprites at a specific scanline
+    * @brief  Searches for sprites at a specific scanline, then save the search result to sprites_at_next_scanline_ and assign is_sprite_zero_in_next_scanline_
     * @param  scanline: The scanline to search for
-    * @return A vector of sprites that are at the specified scanline
+    * @return A vector of sprites that are at the specified scanline, and a bool indicating if sprite zero was part found
     */
-    std::vector<Sprite> searchSpritesAtScanline(const int16_t& scanline) const;
+    void searchSpritesAtScanline(const int16_t& scanline);
 
 private:
     // Colour Palette for display
@@ -323,6 +337,7 @@ private:
     uint16_t bg_shifter_palette_lo_;
     uint16_t bg_shifter_palette_hi_;
 
+    bool is_sprite_zero_in_next_scanline_;
     std::vector<Sprite> sprites_at_next_scanline_;
     std::array<uint8_t, 8> sprite_shifter_pattern_lo_;
     std::array<uint8_t, 8> sprite_shifter_pattern_hi_;

@@ -80,6 +80,7 @@ void RP2C02::runCycle() {
         // Clear VBLANK flag at cycle 1
         if (scanline_cycle_ == 1) {
             status_register_.VBLANK = 0;
+            status_register_.SPRITE_ZERO_HIT = 0;
             status_register_.SPRITE_OVERFLOW = 0;
             // Clear the sprite shifters
             sprite_shifter_pattern_lo_.fill(0x00);
@@ -208,7 +209,8 @@ void RP2C02::runCycle() {
     if ((0 <= scanline_) && (scanline_ <= 239)) {
         // Find the sprites at the next scanline
         if (scanline_cycle_ == 257) {
-            sprites_at_next_scanline_ = std::move(searchSpritesAtScanline(scanline_));
+            // Update sprites_at_next_scaline_
+            searchSpritesAtScanline(scanline_);
             // If there are more than 8 sprites on the next scanline, set the overflow flag
             status_register_.SPRITE_OVERFLOW = (sprites_at_next_scanline_.size() > 8);
         }
@@ -255,6 +257,7 @@ void RP2C02::runCycle() {
     uint8_t sprite_pixel_colour_value = 0x00;
     uint8_t sprite_palette_id = 0x00;
     uint8_t sprite_z_index = 0x00;
+    bool is_sprite_zero_being_rendered = false;
 
     if (mask_register_.SPRITE_ENABLE) {
         for (uint8_t sprite_index = 0; sprite_index < std::min(sprites_at_next_scanline_.size(), static_cast<size_t>(8)); sprite_index++) {
@@ -273,7 +276,12 @@ void RP2C02::runCycle() {
             sprite_z_index = (sprite.attribute & 0x20) == 0;
 
             // Check that this pixel is not transparent
-            if (sprite_pixel_colour_value != 0x00) break;
+            if (sprite_pixel_colour_value != 0x00) {
+                if ((sprite_index == 0) && is_sprite_zero_in_next_scanline_) {
+                    is_sprite_zero_being_rendered = true;
+                }
+                break;
+            }
         }
 
         // Do sprite shifting
@@ -310,6 +318,10 @@ void RP2C02::runCycle() {
     else {
         final_pixel_colour_value = sprite_z_index > 0 ? sprite_pixel_colour_value : bg_pixel_colour_value;
         final_palette_id = sprite_z_index > 0 ? sprite_palette_id : bg_palette_id;
+
+        if (is_sprite_zero_being_rendered && is_sprite_zero_in_next_scanline_ && isRenderingPixel()) {
+            status_register_.SPRITE_ZERO_HIT = 1;
+        }
     }
 
     if (window_ != nullptr) {
@@ -458,12 +470,25 @@ void RP2C02::setNMIFlag(const bool& value) {
     nmi_requested_ = value;
 }
 
-bool RP2C02::isRendering() const {
+bool RP2C02::isRenderEnabled() const {
     return (mask_register_.BACKGROUND_ENABLE || mask_register_.SPRITE_ENABLE);
 }
 
+bool RP2C02::isRenderLeftMostPixelsEnabled() const {
+    return (mask_register_.BACKGROUND_LEFT_COL_ENABLE || mask_register_.SPRITE_LEFT_COL_ENABLE);
+}
+
+bool RP2C02::isRenderingPixel() const {
+    if (!isRenderEnabled()) return false;
+
+    if (isRenderLeftMostPixelsEnabled()) {
+        return ((0 <= scanline_) && (scanline_ < 240) && (0 <= (scanline_cycle_ - 1)) && ((scanline_cycle_ - 1) < 256));
+    }
+    return ((0 <= scanline_) && (scanline_ < 256) && (8 <= (scanline_cycle_ - 1)) && ((scanline_cycle_ - 1) < 256));
+}
+
 void RP2C02::increaseScrollX() {
-    if (!isRendering()) return;
+    if (!isRenderEnabled()) return;
 
     if (loopy_v_register_.COARSE_X == 31) {
         loopy_v_register_.COARSE_X = 0;
@@ -475,7 +500,7 @@ void RP2C02::increaseScrollX() {
 }
 
 void RP2C02::increaseScrollY() {
-    if (!isRendering()) return;
+    if (!isRenderEnabled()) return;
 
     // Increment the fine Y coordinate (1 pixel down within the tile)
     if (loopy_v_register_.FINE_Y < 7) {
@@ -500,13 +525,13 @@ void RP2C02::increaseScrollY() {
 }
 
 void RP2C02::transferLoopyX() {
-    if (!isRendering()) return;
+    if (!isRenderEnabled()) return;
     loopy_v_register_.NAMETABLE_X = loopy_t_register_.NAMETABLE_X;
     loopy_v_register_.COARSE_X = loopy_t_register_.COARSE_X;
 }
 
 void RP2C02::transferLoopyY() {
-    if (!isRendering()) return;
+    if (!isRenderEnabled()) return;
     loopy_v_register_.NAMETABLE_Y = loopy_t_register_.NAMETABLE_Y;
     loopy_v_register_.COARSE_Y = loopy_t_register_.COARSE_Y;
     loopy_v_register_.FINE_Y = loopy_t_register_.FINE_Y;
@@ -579,12 +604,17 @@ const RP2C02::OAM& RP2C02::getOAM() const {
     return oam_;
 }
 
-std::vector<RP2C02::Sprite> RP2C02::searchSpritesAtScanline(const int16_t& scanline) const {
-    std::vector<Sprite> sprites_found;
-    for (const auto& sprite : oam_.sprite_data) {
+void RP2C02::searchSpritesAtScanline(const int16_t& scanline) {
+    is_sprite_zero_in_next_scanline_ = false;
+    sprites_at_next_scanline_.clear();
+
+    for (uint8_t i = 0; i < oam_.sprite_data.size(); i++) {
+        const Sprite& sprite = oam_.sprite_data.at(i);
         if ((sprite.y_position <= scanline) && (scanline < (sprite.y_position + (control_register_.SPRITE_SIZE ? 16 : 8)))) {
-            sprites_found.push_back(sprite);
+            if (i == 0) {
+                is_sprite_zero_in_next_scanline_ = true;
+            }
+            sprites_at_next_scanline_.push_back(sprite);
         }
     }
-    return sprites_found;
 }
