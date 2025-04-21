@@ -12,7 +12,7 @@
 
 class NESWindowSFML : public NESWindow {
 public:
-    NESWindowSFML(const unsigned int& window_width = NES_WINDOW_SFML_WIDTH, const unsigned int& window_height = NES_WINDOW_SFML_HEIGHT, const std::string& window_title = NES_WINDOW_TITLE);
+    NESWindowSFML(const uint16_t& frame_rate_limit = NES_WINDOW_FPS, const uint16_t& window_width = NES_WINDOW_SFML_WIDTH, const uint16_t& window_height = NES_WINDOW_SFML_HEIGHT, const std::string& window_title = NES_WINDOW_TITLE);
     ~NESWindowSFML() override;
     void setPixel(const uint16_t& x, const uint16_t& y, const Colour& colour) override;
     void render() override;

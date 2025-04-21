@@ -2,6 +2,7 @@
 #define _NES_HPP_
 // Project Headers
 #include "nes-window.hpp"
+#include "nes-sound.hpp"
 #include "cartridge.hpp"
 #include "rp2A03.hpp"
 #include "cpu-bus.hpp"
@@ -25,6 +26,13 @@ public:
     * @return None
     */
     void connectDisplayWindow(NESWindow& window);
+
+    /**
+    * @brief  Connects the NES system to the sound system
+    * @param  sound_system: The sound system to connect to
+    * @return None
+    */
+    void connectSoundSystem(NESSound& sound_system);
 
     /**
     * @brief  Loads the cartridge from the file path

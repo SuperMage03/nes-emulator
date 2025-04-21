@@ -18,6 +18,10 @@ uint8_t CPUBUS::readBusData(const uint16_t& address) const {
         return ppu_.readRegister(address & 0b00000111);
     }
 
+    if (((0x4000 <= address) && (address <= 0x4013)) || (address == 0x4015)) {
+        return cpu_.readAPURegister(address - 0x4000);
+    }
+
     // Read the controller state
     if ((address == 0x4016) || (address == 0x4017)) {
         uint8_t controller_index = address - 0x4016;
@@ -64,18 +68,19 @@ bool CPUBUS::writeBusData(const uint16_t& address, const uint8_t& data) {
         return true;
     }
 
-    // Request the controller to load the shift register
-    if ((address == 0x4016) || (address == 0x4017)) {
-        uint8_t controller_index = address - 0x4016;
-        if (controllers_.at(controller_index)) {
-            controllers_.at(controller_index)->loadShiftRegister();
-            return true;
+    // Request the controllers to load the shift register
+    if (address == 0x4016) {
+        if (controllers_.at(0)) {
+            controllers_.at(0)->loadShiftRegister();
         }
-        return false;
+        if (controllers_.at(1)) {
+            controllers_.at(1)->loadShiftRegister();
+        }
+        return (controllers_.at(0) || controllers_.at(1));
     }
 
-    if ((0x4000 <= address) && (address <= 0x401F)) {
-        // Emulate the mirroring of the APU and I/O registers
+    if (((0x4000 <= address) && (address <= 0x4013)) || (address == 0x4015) || (address == 0x4017)) {
+        return cpu_.writeAPURegister(address - 0x4000, data);
     }
 
     if ((0x4020 <= address) && (address <= 0x5FFF)) {

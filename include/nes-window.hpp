@@ -3,6 +3,7 @@
 // Standard Library Headers
 #include <cstdint>
 // Project Defines
+#define NES_WINDOW_FPS     60
 #define NES_WINDOW_WIDTH  256
 #define NES_WINDOW_HEIGHT 240
 

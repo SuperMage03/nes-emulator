@@ -1,8 +1,10 @@
 // External Library Headers
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 // Project Headers
 #include "nes-window-sfml.hpp"
+#include "nes-sound-sfml.hpp"
 #include "nes.hpp"
 #include "controller.hpp"
 // Debugging Headers
@@ -13,7 +15,8 @@
 int main(int argc, char* argv[]) {
     NESWindowSFML nes_window;
     sf::RenderWindow& window = nes_window.getWindow();
-    window.setFramerateLimit(60);
+
+    NESSoundSFML nes_sound;
 
     NES nes;
     nes.connectDisplayWindow(nes_window);
@@ -117,7 +120,9 @@ int main(int argc, char* argv[]) {
                 window.setSize(sf::Vector2u(new_size.x, new_size.y));
             }
         }
+
         nes.stepFrame();
+        nes_sound.play();
         nes_window.render();
 
         #ifdef DEBUG

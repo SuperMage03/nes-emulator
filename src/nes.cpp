@@ -14,6 +14,10 @@ void NES::connectDisplayWindow(NESWindow& window) {
     ppu_.connectDisplayWindow(&window);
 }
 
+void NES::connectSoundSystem(NESSound& sound_system) {
+    cpu_.connectSoundSystem(sound_system);
+}
+
 void NES::loadCartridge(const std::string& path) {
     // Open the file
     std::ifstream nes_rom;
@@ -49,6 +53,7 @@ void NES::clock() {
 }
 
 void NES::stepFrame() {
+    // In reality it's 89341.5 clocks per frame
     for (uint64_t i = 0; i < 89342; i++) {
         clock();
     }
