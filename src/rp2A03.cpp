@@ -10,6 +10,8 @@ RP2A03::RP2A03():
 
 void RP2A03::runCycle() {
     clock_count_++;
+
+    apu_.clockAPU();
     
     if (dma_transfer_in_progress_) {
         if (!dma_is_synced_) {
@@ -44,4 +46,16 @@ void RP2A03::startDMATransfer(const uint8_t& page) {
     dma_address_ = 0x00;
     dma_transfer_in_progress_ = true;
     dma_is_synced_ = false;
+}
+
+uint8_t RP2A03::readAPURegister(const uint8_t& address) {
+    return apu_.readAPURegister(address);
+}
+
+bool RP2A03::writeAPURegister(const uint8_t& address, const uint8_t& data) {
+    return apu_.writeAPURegister(address, data);
+}
+
+void RP2A03::connectSoundSystem(NESSound& sound_system) {
+    apu_.connectSoundSystem(sound_system);
 }

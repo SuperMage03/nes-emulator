@@ -20,7 +20,8 @@ int main(int argc, char* argv[]) {
 
     NES nes;
     nes.connectDisplayWindow(nes_window);
-    nes.loadCartridge("./tests/nestest.nes");
+    nes.connectSoundSystem(nes_sound);
+    nes.loadCartridge("./tests/super_mario_brothers.nes");
 
     Controller controller_one;
     nes.connectController(controller_one);    

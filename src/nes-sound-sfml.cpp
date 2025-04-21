@@ -1,4 +1,5 @@
 #include "nes-sound-sfml.hpp"
+#include <cstdint>
 
 NESSoundSFML::NESSoundSFML(const uint32_t& sample_buffer_size): 
     sample_buffer_size_(sample_buffer_size), sample_count_(0), 
@@ -8,7 +9,8 @@ NESSoundSFML::NESSoundSFML(const uint32_t& sample_buffer_size):
 
 void NESSoundSFML::queueSample(const float& sample) {
     if (sample_count_ >= sample_buffer_size_) return;
-    sample_buffer_[sample_count_] = (sample - 0.5f) * UINT16_MAX;
+    int16_t converted_sample = sample * (INT16_MAX - 1);
+    sample_buffer_[sample_count_] = converted_sample;
     sample_count_++;
 }
 
