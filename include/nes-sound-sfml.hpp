@@ -2,6 +2,7 @@
 #define _NES_SOUND_SFML_HPP_
 #include "nes-sound.hpp"
 // Standard Library Headers
+#include <cstdint>
 #include <memory>
 // External Library Headers
 #include <SFML/Audio.hpp>
