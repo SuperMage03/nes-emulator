@@ -331,17 +331,18 @@ void APU::clockAPU() {
     clock_count_++;
     clockTimers();
 
+    // For more accurate clocking
+    uint64_t previous_clcok_count = clock_count_ - 1;
+
     // APU is clocked every CPU clock (1789773Hz) and Sequencer is clocked at 240Hz
     //   So sequncer clocks every 1789773 / 240 = 7457.3875 apu cycles
-    // We will just clock sequencer every 7457 apu cycles
-    if (clock_count_ % 7457 == 0) {
+    if (static_cast<uint64_t>(previous_clcok_count / 7457.3875f) != static_cast<uint64_t>(clock_count_ / 7457.3875f)) {
         clockSequencer();
     }
 
     // Sample Rate is 44100Hz, so similar to clocking sequencer
     //   We will sample every 1789773 / 44100 = 40.5844217687 apu cycles
-    // We will just clock sequencer every 40 apu cycles
-    if (clock_count_ % 40 == 0) {
+    if (static_cast<uint64_t>(previous_clcok_count / 40.5844217687f) != static_cast<uint64_t>(clock_count_ / 40.5844217687f)) {
         if (sound_system_) {
             float sampleOut = sampleMixerOut(pulse_1_channel.getOutput(), pulse_2_channel.getOutput(), 0, 0, 0);
             sound_system_->queueSample(sampleOut);
