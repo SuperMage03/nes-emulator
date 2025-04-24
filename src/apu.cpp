@@ -62,9 +62,7 @@ const std::array<uint8_t, 0x20> APU::LengthCounter::s_load_table = {{
 APU::LengthCounter::LengthCounter(): is_enabled(false), value(0) {}
 
 void APU::LengthCounter::load(const uint8_t& load_table_index) {
-    if (is_enabled) {
-        value = s_load_table.at(load_table_index);
-    }
+    value = s_load_table.at(load_table_index);
 }
 
 void APU::LengthCounter::clock() {
@@ -152,6 +150,58 @@ uint8_t APU::PulseChannel::getOutput() const {
     return envelope_.is_enabled ? envelope_.volume : envelope_.divider_period;
 }
 
+// From NES Dev Wiki
+const std::array<uint8_t, 32> APU::TriangleChannel::s_duty_value_table = { {
+    15, 14, 13, 12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1,  0,
+     0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15
+} };
+
+void APU::TriangleChannel::clockTimer() {
+    if (timer_.value > 0) {
+        timer_.value--;
+        return;
+    }
+    // Reload Timer
+    timer_.value = timer_.period + 1;
+    if ((length_counter_.value > 0) && (linear_counter_.value > 0)) {
+        duty_value_ = (duty_value_ + 1) % 32;
+    }
+}
+
+void APU::TriangleChannel::clockLengthCounter() {
+    if (length_counter_.is_enabled && (length_counter_.value > 0)) {
+        length_counter_.value--;
+    }
+}
+
+void APU::TriangleChannel::clockLinearCounter() {
+    if (linear_counter_.value > 0) {
+        linear_counter_.value--;
+        return;
+    }
+
+    if (linear_counter_.is_reloading) {
+        linear_counter_.value = linear_counter_.period;
+    }
+
+    if (!linear_counter_.control_flag) {
+        linear_counter_.is_reloading = false;
+    }
+}
+
+uint8_t APU::TriangleChannel::getOutput() const {
+    if (!is_enabled_) {
+        return 0;
+    }
+    if (length_counter_.value == 0) {
+        return 0;
+    }
+    if (linear_counter_.value == 0) {
+        return 0;
+    }
+    return s_duty_value_table.at(duty_value_);
+}
+
 uint8_t APU::readAPURegister(const uint8_t& address) {
     switch (address) {
     case 0x15:
@@ -218,11 +268,28 @@ bool APU::writeAPURegister(const uint8_t& address, const uint8_t& data) {
         pulse_2_channel.envelope_.is_starting = true;
         pulse_2_channel.duty_value_ = 0;
         break;
+    // Triangle Channel Control
+    case 0x08:
+        triangle_channel.length_counter_.is_enabled = data & 0b10000000;
+        triangle_channel.linear_counter_.control_flag = data & 0b10000000;
+        triangle_channel.linear_counter_.period = data & 0b01111111;
+        break;
+    // Triangle Channel Timer Low Byte
+    case 0x0A:
+        triangle_channel.timer_.period = (triangle_channel.timer_.period & 0xFF00) | data;
+        break;
+    // Triangle Channel Timer High Byte and Length Counter value
+    case 0x0B:
+        triangle_channel.timer_.period = (triangle_channel.timer_.period & 0x00FF) | ((data & 0x07) << 8);
+        triangle_channel.timer_.value = triangle_channel.timer_.period + 1;
+        triangle_channel.length_counter_.load(data >> 3);
+        triangle_channel.linear_counter_.is_reloading = true;
+        break;
     // TODO
     case 0x15:
         pulse_1_channel.is_enabled_ = data & 0b00000001;
         pulse_2_channel.is_enabled_ = data & 0b00000010;
-        // triangle_channel.is_enabled_ = data & 0b00000100;
+        triangle_channel.is_enabled_ = data & 0b00000100;
         // noise_channel.is_enabled_ = data & 0b00001000;
         // dmc_channel.is_enabled_ = data & 0b00010000;
 
@@ -232,9 +299,9 @@ bool APU::writeAPURegister(const uint8_t& address, const uint8_t& data) {
         if (!pulse_2_channel.is_enabled_) {
             pulse_2_channel.length_counter_.value = 0;
         }
-        // if (!triangle_channel.is_enabled_) {
-        //     triangle_channel.length_counter_.value = 0;
-        // }
+        if (!triangle_channel.is_enabled_) {
+            triangle_channel.length_counter_.value = 0;
+        }
         // if (!noise_channel.is_enabled_) {
         //     noise_channel.length_counter_.value = 0;
         // }
@@ -242,12 +309,16 @@ bool APU::writeAPURegister(const uint8_t& address, const uint8_t& data) {
         //     dmc_channel.length_counter_.value = 0;
         // }
         break;
+    case 0x17:
+        sequencer_mode_ = static_cast<APU::SequencerMode>((data & 0b10000000) > 0);
+        frame_irq_ = (data & 0b01000000) > 0;
+        break;
     }
     return true;
 }
 
 void APU::clockTimers() {
-    // triangle_channel.clockTimer();
+    triangle_channel.clockTimer();
     if (clock_count_ % 2) {
         pulse_1_channel.clockTimer();
         pulse_2_channel.clockTimer();
@@ -259,14 +330,15 @@ void APU::clockTimers() {
 void APU::clockLengthCounters() {
     pulse_1_channel.length_counter_.clock();
     pulse_2_channel.length_counter_.clock();
-    // triangle_channel.length_counter_.clock();
     // noise_channel.length_counter_.clock();
+    triangle_channel.clockLengthCounter();
 }
 
 void APU::clockEnvelopes() {
     pulse_1_channel.envelope_.clock();
     pulse_2_channel.envelope_.clock();
     // noise_channel.envelope_.clock();
+    triangle_channel.clockLinearCounter();
 }
 
 void APU::clockSweeps() {
@@ -344,7 +416,7 @@ void APU::clockAPU() {
     //   We will sample every 1789773 / 44100 = 40.5844217687 apu cycles
     if (static_cast<uint64_t>(previous_clcok_count / 40.5844217687f) != static_cast<uint64_t>(clock_count_ / 40.5844217687f)) {
         if (sound_system_) {
-            float sampleOut = sampleMixerOut(pulse_1_channel.getOutput(), pulse_2_channel.getOutput(), 0, 0, 0);
+            float sampleOut = sampleMixerOut(pulse_1_channel.getOutput(), pulse_2_channel.getOutput(), triangle_channel.getOutput(), 0, 0);
             sound_system_->queueSample(sampleOut);
         }
     }

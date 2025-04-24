@@ -41,7 +41,6 @@ public:
     };
 
     struct Sweep {
-        void clock();
         // Members
         union {
             uint8_t state_value;
@@ -80,8 +79,29 @@ public:
 
     };
 
-    struct TriangleChannel {
+    class TriangleChannel {
+    public:
+        bool is_enabled_;
+        uint8_t duty_value_;
+        Timer timer_;
         LengthCounter length_counter_;
+
+        struct LinearCounter {
+            bool control_flag;
+            bool is_reloading;
+            uint8_t value;
+            uint8_t period;
+        } linear_counter_;
+
+        // Methods
+        void clockTimer();
+        void clockLengthCounter();
+        void clockLinearCounter();
+        uint8_t getOutput() const;
+
+    private:
+        static const std::array<uint8_t, 32> s_duty_value_table;
+
     } triangle_channel;
 
     struct NoiseChannel {
@@ -135,8 +155,8 @@ private:
     // Sequencer Value
     uint8_t sequencer_value_;
     enum class SequencerMode {
-        FourStep,
-        FiveStep,
+        FourStep = 0,
+        FiveStep = 1,
     } sequencer_mode_;
     
     bool irq_inhibit_;

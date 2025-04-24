@@ -20,7 +20,7 @@ NESDebugWindow::NESDebugWindow():
     name_table_1_sprite_{name_table_1_texture_},
     name_table_0_pixel_buffer_{std::make_unique<uint8_t[]>(NES_DEBUG_WINDOW_NAME_TABLE_WIDTH * NES_DEBUG_WINDOW_NAME_TABLE_HEIGHT * 4)},
     name_table_1_pixel_buffer_{std::make_unique<uint8_t[]>(NES_DEBUG_WINDOW_NAME_TABLE_WIDTH * NES_DEBUG_WINDOW_NAME_TABLE_HEIGHT * 4)} {
-    window_.setFramerateLimit(60);
+    window_.setFramerateLimit(0);
     name_table_0_sprite_.setPosition({13, NES_DEBUG_WINDOW_HEIGHT - NES_DEBUG_WINDOW_NAME_TABLE_HEIGHT - 10});
     name_table_1_sprite_.setPosition({25 + NES_DEBUG_WINDOW_NAME_TABLE_WIDTH, NES_DEBUG_WINDOW_HEIGHT - NES_DEBUG_WINDOW_NAME_TABLE_HEIGHT - 10});
 }
