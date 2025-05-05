@@ -30,6 +30,7 @@ public:
     };
 
     struct Envelope {
+        Envelope();
         void clock();
         // Members
         bool is_enabled;
@@ -76,8 +77,16 @@ public:
     private:
         static const std::array<std::array<uint8_t, 8>, 4> s_duty_value_table;
         void (*timer_period_modifier_)(uint16_t& timer_reload, const uint16_t& change);
-
     };
+
+    struct LinearCounter {
+        LinearCounter();
+        // Member
+        bool control_flag;
+        bool is_reloading;
+        uint8_t value;
+        uint8_t period;
+    } ;
 
     class TriangleChannel {
     public:
@@ -85,15 +94,10 @@ public:
         uint8_t duty_value_;
         Timer timer_;
         LengthCounter length_counter_;
-
-        struct LinearCounter {
-            bool control_flag;
-            bool is_reloading;
-            uint8_t value;
-            uint8_t period;
-        } linear_counter_;
+        LinearCounter linear_counter_;
 
         // Methods
+        TriangleChannel();
         void clockTimer();
         void clockLengthCounter();
         void clockLinearCounter();
@@ -113,6 +117,7 @@ public:
         LengthCounter length_counter_;
     } dmc_channel;
 
+    APU();
     // Read APU Register
     uint8_t readAPURegister(const uint8_t& address);
     // Write APU Register

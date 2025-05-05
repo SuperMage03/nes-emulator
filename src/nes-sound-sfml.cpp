@@ -1,5 +1,4 @@
 #include "nes-sound-sfml.hpp"
-#include <stdexcept>
 
 NESSoundSFML::NESSoundSFML(const uint32_t& sample_buffer_size): 
     sample_buffer_size_(sample_buffer_size), sample_count_(0), 

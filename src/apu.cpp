@@ -70,6 +70,7 @@ void APU::LengthCounter::clock() {
         value--;
     }
 }
+APU::Envelope::Envelope(): is_enabled(false), is_starting(false), is_looping(false), divider_period(0), divider_value(0), volume(0) {}
 
 void APU::Envelope::clock() {
     if (is_starting) {
@@ -101,7 +102,7 @@ const std::array<std::array<uint8_t, 8>, 4> APU::PulseChannel::s_duty_value_tabl
 }};
 
 APU::PulseChannel::PulseChannel(void (*timer_period_modifier_)(uint16_t& timer_reload, const uint16_t& change)): 
-    timer_period_modifier_(timer_period_modifier_) {}
+    is_enabled_(false), duty_cycle_(0), duty_value_(0), timer_period_modifier_(timer_period_modifier_) {}
 
 void APU::PulseChannel::clockTimer() {
     if (timer_.value == 0) {
@@ -150,11 +151,15 @@ uint8_t APU::PulseChannel::getOutput() const {
     return envelope_.is_enabled ? envelope_.volume : envelope_.divider_period;
 }
 
+APU::LinearCounter::LinearCounter(): control_flag(false), is_reloading(false), value(0), period(0) {}
+
 // From NES Dev Wiki
 const std::array<uint8_t, 32> APU::TriangleChannel::s_duty_value_table = { {
     15, 14, 13, 12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1,  0,
      0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15
 } };
+
+APU::TriangleChannel::TriangleChannel(): is_enabled_(false), duty_value_(0) {}
 
 void APU::TriangleChannel::clockTimer() {
     if (timer_.value > 0) {
@@ -201,6 +206,8 @@ uint8_t APU::TriangleChannel::getOutput() const {
     }
     return s_duty_value_table.at(duty_value_);
 }
+
+APU::APU(): clock_count_(0), sequencer_value_(0), sequencer_mode_(SequencerMode::FourStep), irq_inhibit_(false), frame_irq_(false), irq_requested_(false) {}
 
 uint8_t APU::readAPURegister(const uint8_t& address) {
     switch (address) {
